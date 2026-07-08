@@ -6,7 +6,19 @@ const AUTO_REFRESH_MS = 30000;
 const OPEN_HOUR = 8;
 const CLOSE_HOUR = 20;
 
+const app = document.querySelector(".app");
+const authScreen = document.querySelector("#authScreen");
+const loginForm = document.querySelector("#loginForm");
+const authMessage = document.querySelector("#authMessage");
+const resetPasswordButton = document.querySelector("#resetPassword");
+const loginEmail = document.querySelector("#loginEmail");
+const loginPassword = document.querySelector("#loginPassword");
+const logoutButton = document.querySelector("#logoutButton");
+const userBadge = document.querySelector("#userBadge");
 const bookingForm = document.querySelector("#bookingForm");
+const userForm = document.querySelector("#userForm");
+const userMessage = document.querySelector("#userMessage");
+const adminPanel = document.querySelector("#adminPanel");
 const calendar = document.querySelector("#calendar");
 const bookingList = document.querySelector("#bookingList");
 const bookingCount = document.querySelector("#bookingCount");
@@ -18,6 +30,8 @@ const syncStatus = document.querySelector("#syncStatus");
 const dateInput = document.querySelector("#date");
 const startInput = document.querySelector("#start_time");
 const endInput = document.querySelector("#end_time");
+const nameInput = document.querySelector("#name");
+const companyInput = document.querySelector("#company");
 const clearLocalButton = document.querySelector("#clearLocal");
 
 const hasSupabaseConfig = SUPABASE_URL.startsWith("https://") && SUPABASE_ANON_KEY.length > 20;
@@ -27,27 +41,51 @@ const supabaseClient = hasSupabaseConfig
 
 let currentMonday = getMonday(new Date());
 let bookings = [];
+let currentUser = null;
+let currentProfile = null;
 let realtimeChannel = null;
 
 init();
 
-function init() {
+async function init() {
   dateInput.valueAsDate = new Date();
   startInput.value = "09:00";
   endInput.value = "10:00";
+  nameInput.readOnly = true;
+  companyInput.readOnly = true;
   updateSyncStatus();
   bindEvents();
-  loadBookings();
+  render();
+
+  if (!supabaseClient) {
+    showAuthMessage("Configura Supabase per usare login e prenotazioni condivise.", "error");
+    return;
+  }
+
+  const { data } = await supabaseClient.auth.getSession();
+  if (data.session?.user) {
+    await handleAuthenticated(data.session.user);
+  } else {
+    showLogin();
+  }
+
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    if (event === "SIGNED_OUT") showLogin();
+    if (event === "SIGNED_IN" && session?.user) await handleAuthenticated(session.user);
+  });
 
   window.setInterval(renderStatus, AUTO_REFRESH_MS);
-
-  if (supabaseClient) {
-    subscribeToRealtime();
-    window.setInterval(loadBookings, AUTO_REFRESH_MS);
-  }
+  window.setInterval(() => {
+    if (currentUser) loadBookings();
+  }, AUTO_REFRESH_MS);
 }
 
 function bindEvents() {
+  loginForm.addEventListener("submit", handleLogin);
+  resetPasswordButton.addEventListener("click", sendPasswordReset);
+  logoutButton.addEventListener("click", logout);
+  userForm.addEventListener("submit", registerUserRequest);
+
   document.querySelector("#prevWeek").addEventListener("click", () => {
     currentMonday.setDate(currentMonday.getDate() - 7);
     render();
@@ -74,9 +112,95 @@ function bindEvents() {
   bookingForm.addEventListener("submit", handleSubmit);
 }
 
+async function handleLogin(event) {
+  event.preventDefault();
+  showAuthMessage("");
+
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email: loginEmail.value.trim(),
+    password: loginPassword.value,
+  });
+
+  if (error) {
+    showAuthMessage("Accesso non riuscito. Controlla email e password.", "error");
+  }
+}
+
+async function sendPasswordReset() {
+  const email = loginEmail.value.trim();
+
+  if (!email) {
+    showAuthMessage("Inserisci prima la tua email.", "error");
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.href,
+  });
+
+  showAuthMessage(
+    error ? "Non riesco a inviare la mail di reset." : "Email inviata: controlla la tua posta.",
+    error ? "error" : "ok"
+  );
+}
+
+async function logout() {
+  await supabaseClient.auth.signOut();
+}
+
+async function handleAuthenticated(user) {
+  currentUser = user;
+  currentProfile = await getProfile(user);
+  applyProfile();
+  authScreen.classList.add("hidden");
+  app.classList.remove("hidden");
+  await loadBookings();
+  subscribeToRealtime();
+}
+
+function showLogin() {
+  currentUser = null;
+  currentProfile = null;
+  bookings = [];
+  unsubscribeFromRealtime();
+  app.classList.add("hidden");
+  authScreen.classList.remove("hidden");
+  adminPanel.classList.add("hidden");
+  userBadge.textContent = "Utente non autenticato";
+  render();
+}
+
+async function getProfile(user) {
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("id,username,company,email,is_admin")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    showMessage("Profilo non trovato. Controlla lo script Supabase.", "error");
+  }
+
+  return data || {
+    id: user.id,
+    username: user.email,
+    company: "",
+    email: user.email,
+    is_admin: false,
+  };
+}
+
+function applyProfile() {
+  const displayName = currentProfile.username || currentUser.email;
+  nameInput.value = displayName;
+  companyInput.value = currentProfile.company || "";
+  userBadge.textContent = `${displayName}${currentProfile.is_admin ? " · admin" : ""}`;
+  adminPanel.classList.toggle("hidden", !currentProfile.is_admin);
+}
+
 function updateSyncStatus() {
   if (supabaseClient) {
-    syncStatus.textContent = "Modalita condivisa";
+    syncStatus.textContent = "Modalita condivisa con login";
     syncStatus.classList.add("online");
     clearLocalButton.hidden = true;
     return;
@@ -98,7 +222,7 @@ async function loadBookings() {
 async function getRemoteBookings() {
   const { data, error } = await supabaseClient
     .from("bookings")
-    .select("id,name,company,date,start_time,end_time,notes,created_at")
+    .select("id,user_id,name,company,date,start_time,end_time,notes,created_at")
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });
 
@@ -116,6 +240,11 @@ function getLocalBookings() {
 
 async function handleSubmit(event) {
   event.preventDefault();
+
+  if (supabaseClient && !currentUser) {
+    showMessage("Devi accedere prima di prenotare.", "error");
+    return;
+  }
 
   const booking = getBookingFromForm();
   const validationMessage = validateBooking(booking);
@@ -140,6 +269,7 @@ async function handleSubmit(event) {
     }
 
     bookingForm.reset();
+    applyProfile();
     dateInput.value = booking.date;
     startInput.value = booking.end_time;
     endInput.value = addMinutes(booking.end_time, 60);
@@ -160,8 +290,9 @@ function getBookingFromForm() {
   const formData = new FormData(bookingForm);
 
   return {
-    name: cleanText(formData.get("name")),
-    company: cleanText(formData.get("company")),
+    user_id: currentUser?.id || null,
+    name: cleanText(currentProfile?.username || formData.get("name")),
+    company: cleanText(currentProfile?.company || formData.get("company")),
     date: formData.get("date"),
     start_time: formData.get("start_time"),
     end_time: formData.get("end_time"),
@@ -211,7 +342,43 @@ function saveLocalBooking(booking) {
   return nextBookings;
 }
 
+async function registerUserRequest(event) {
+  event.preventDefault();
+
+  if (!currentProfile?.is_admin) {
+    showUserMessage("Solo l'amministratore puo registrare utenti.", "error");
+    return;
+  }
+
+  const formData = new FormData(userForm);
+  const password = String(formData.get("password") || "");
+  const payload = {
+    username: cleanText(formData.get("username")),
+    company: cleanText(formData.get("company")),
+    email: cleanText(formData.get("email")).toLowerCase(),
+    temporary_password_set: password.length > 0,
+    created_by: currentUser.id,
+  };
+
+  const { error } = await supabaseClient.from("user_requests").insert(payload);
+
+  if (error) {
+    showUserMessage("Non riesco a registrare la richiesta utente.", "error");
+    return;
+  }
+
+  userForm.reset();
+  showUserMessage(
+    password
+      ? "Richiesta salvata. Crea l'utente in Supabase Auth con questa password temporanea."
+      : "Richiesta salvata. Invia l'invito/reset password da Supabase Auth.",
+    "ok"
+  );
+}
+
 function subscribeToRealtime() {
+  if (!supabaseClient || realtimeChannel) return;
+
   realtimeChannel = supabaseClient
     .channel("bookings-realtime")
     .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, loadBookings)
@@ -220,6 +387,12 @@ function subscribeToRealtime() {
   window.addEventListener("beforeunload", () => {
     if (realtimeChannel) supabaseClient.removeChannel(realtimeChannel);
   });
+}
+
+function unsubscribeFromRealtime() {
+  if (!supabaseClient || !realtimeChannel) return;
+  supabaseClient.removeChannel(realtimeChannel);
+  realtimeChannel = null;
 }
 
 function render() {
@@ -380,6 +553,16 @@ function addMinutes(time, minutes) {
 function showMessage(text, type) {
   message.textContent = text;
   message.className = type ? `message ${type}` : "message";
+}
+
+function showAuthMessage(text, type) {
+  authMessage.textContent = text;
+  authMessage.className = type ? `message ${type}` : "message";
+}
+
+function showUserMessage(text, type) {
+  userMessage.textContent = text;
+  userMessage.className = type ? `message ${type}` : "message";
 }
 
 function escapeHtml(text) {

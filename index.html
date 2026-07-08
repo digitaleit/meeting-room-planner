@@ -11,6 +11,28 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <section class="auth-screen" id="authScreen">
+    <form class="auth-card" id="loginForm">
+      <p class="eyebrow">Accesso riservato</p>
+      <h1>Planner Sala Riunioni</h1>
+      <p class="subtitle">Entra con il tuo account autorizzato per vedere e creare prenotazioni.</p>
+
+      <label>
+        Email
+        <input id="loginEmail" name="email" type="email" autocomplete="email" required>
+      </label>
+
+      <label>
+        Password
+        <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
+      </label>
+
+      <button type="submit">Accedi</button>
+      <button class="ghost-link" id="resetPassword" type="button">Imposta o recupera password</button>
+      <p id="authMessage" class="message" role="status"></p>
+    </form>
+  </section>
+
   <main class="app">
     <header class="hero" aria-labelledby="pageTitle">
       <div class="hero-copy">
@@ -23,6 +45,8 @@
         <span id="roomStatus" class="status free">Libera ora</span>
         <small id="nextBooking">Nessuna prenotazione imminente</small>
         <span id="syncStatus" class="sync-status">Modalita locale</span>
+        <small id="userBadge">Utente non autenticato</small>
+        <button id="logoutButton" class="secondary" type="button">Esci</button>
       </div>
     </header>
 
@@ -97,6 +121,40 @@
       <div class="calendar-wrap">
         <section class="calendar" id="calendar" aria-live="polite"></section>
       </div>
+    </section>
+
+    <section class="admin-panel panel hidden" id="adminPanel" aria-labelledby="adminTitle">
+      <div class="list-heading">
+        <div>
+          <h2 id="adminTitle">Gestione utenti</h2>
+          <p class="panel-note">Area amministratore. Gli inviti email richiedono la funzione Supabase indicata nel README.</p>
+        </div>
+      </div>
+
+      <form id="userForm" class="admin-form">
+        <label>
+          User
+          <input id="newUsername" name="username" type="text" autocomplete="off" maxlength="60" required>
+        </label>
+
+        <label>
+          Email
+          <input id="newEmail" name="email" type="email" autocomplete="email" required>
+        </label>
+
+        <label>
+          Azienda
+          <input id="newCompany" name="company" type="text" autocomplete="organization" maxlength="100" required>
+        </label>
+
+        <label>
+          Password temporanea
+          <input id="newPassword" name="password" type="password" autocomplete="new-password" placeholder="Lascia vuota per invito/reset">
+        </label>
+
+        <button type="submit">Registra richiesta utente</button>
+        <p id="userMessage" class="message" role="status"></p>
+      </form>
     </section>
   </main>
 

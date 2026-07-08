@@ -30,6 +30,39 @@ body {
   color: var(--text);
 }
 
+.auth-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(135deg, rgba(15, 118, 110, 0.14), transparent 38%),
+    var(--bg);
+}
+
+.auth-screen.hidden,
+.hidden {
+  display: none !important;
+}
+
+.auth-card {
+  display: grid;
+  width: min(440px, 100%);
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow);
+  padding: 28px;
+}
+
+.auth-card h1 {
+  margin-bottom: 0;
+  font-size: clamp(2rem, 8vw, 3.2rem);
+}
+
 button,
 input,
 textarea {
@@ -267,6 +300,19 @@ textarea:focus {
   background: var(--primary-soft);
 }
 
+.ghost-link {
+  min-height: auto;
+  padding: 0;
+  background: transparent;
+  color: var(--primary-dark);
+  text-align: left;
+  text-decoration: underline;
+}
+
+.ghost-link:hover {
+  background: transparent;
+}
+
 #clearLocal {
   flex: 0 0 auto;
 }
@@ -317,6 +363,22 @@ textarea:focus {
 
 .week-shell {
   margin-top: 24px;
+}
+
+.admin-panel {
+  margin-top: 24px;
+}
+
+.admin-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.admin-form button,
+.admin-form .message {
+  grid-column: 1 / -1;
 }
 
 .toolbar {
@@ -409,6 +471,10 @@ textarea:focus {
   .list-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .admin-form {
+    grid-template-columns: 1fr;
   }
 }
 
