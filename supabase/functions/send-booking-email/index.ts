@@ -28,12 +28,13 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const resendApiKey = Deno.env.get("RESEND_API_KEY");
-  const fromEmail = Deno.env.get("FROM_EMAIL") || "Meeting Room Planner <onboarding@resend.dev>";
+  const brevoApiKey = Deno.env.get("BREVO_API_KEY");
+  const senderEmail = Deno.env.get("BREVO_SENDER_EMAIL") || "stefano@stefanoserra.it";
+  const senderName = Deno.env.get("BREVO_SENDER_NAME") || "Meeting Room Planner";
   const adminEmail = Deno.env.get("ADMIN_EMAIL") || "stefano@stefanoserra.it";
 
-  if (!resendApiKey) {
-    return jsonResponse({ error: "Missing RESEND_API_KEY" }, 500);
+  if (!brevoApiKey) {
+    return jsonResponse({ error: "Missing BREVO_API_KEY" }, 500);
   }
 
   const payload = await request.json() as RequestPayload;
@@ -56,21 +57,24 @@ Deno.serve(async (request) => {
   const text = buildEmailText(booking);
 
   const recipients = Array.from(new Set([attendeeEmail, adminEmail].filter(Boolean)));
-  const response = await fetch("https://api.resend.com/emails", {
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${resendApiKey}`,
+      "api-key": brevoApiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: fromEmail,
-      to: recipients,
+      sender: {
+        name: senderName,
+        email: senderEmail,
+      },
+      to: recipients.map((email) => ({ email })),
       subject,
-      html,
-      text,
-      attachments: [
+      htmlContent: html,
+      textContent: text,
+      attachment: [
         {
-          filename: "prenotazione-sala.ics",
+          name: "prenotazione-sala.ics",
           content: base64FromUtf8(ics),
         },
       ],

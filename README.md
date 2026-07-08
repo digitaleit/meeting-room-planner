@@ -126,14 +126,12 @@ La funzione invia:
 - copia admin a `stefano@stefanoserra.it`;
 - allegato `.ics` per il calendario personale.
 
-### Configurare Resend
+### Configurare Brevo
 
-1. Crea un account su [Resend](https://resend.com/).
+1. Crea un account su [Brevo](https://www.brevo.com/).
 2. Crea una API key.
-3. Se non configuri un dominio, in fase test usa il mittente `onboarding@resend.dev`.
-4. Per produzione, configura un dominio verificato e usa un mittente tipo `Sala Riunioni <prenotazioni@tuodominio.it>`.
-
-Nota: senza dominio verificato, Resend puo limitare l'invio alle email verificate nel tuo account. Per inviare a tutti gli utenti del coworking serve verificare un dominio.
+3. Verifica un mittente, per esempio `stefano@stefanoserra.it`.
+4. Usa quel mittente nei secrets Supabase.
 
 ### Deploy funzione Supabase
 
@@ -142,8 +140,9 @@ Installa la Supabase CLI, poi dalla cartella del progetto esegui:
 ```bash
 supabase login
 supabase link --project-ref zpiocrzswxjnfvyeinsi
-supabase secrets set RESEND_API_KEY="la_tua_resend_api_key"
-supabase secrets set FROM_EMAIL="Meeting Room Planner <onboarding@resend.dev>"
+supabase secrets set BREVO_API_KEY="la_tua_brevo_api_key"
+supabase secrets set BREVO_SENDER_EMAIL="stefano@stefanoserra.it"
+supabase secrets set BREVO_SENDER_NAME="Meeting Room Planner"
 supabase secrets set ADMIN_EMAIL="stefano@stefanoserra.it"
 supabase functions deploy send-booking-email
 ```
