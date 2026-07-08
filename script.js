@@ -382,28 +382,32 @@ async function registerUserRequest(event) {
     return;
   }
 
+  showUserMessage("Creazione utente in corso...", "");
+
   const formData = new FormData(userForm);
-  const password = String(formData.get("password") || "");
   const payload = {
     username: cleanText(formData.get("username")),
     company: cleanText(formData.get("company")),
     email: cleanText(formData.get("email")).toLowerCase(),
-    temporary_password_set: password.length > 0,
-    created_by: currentUser.id,
   };
+  const password = String(formData.get("password") || "").trim();
 
-  const { error } = await supabaseClient.from("user_requests").insert(payload);
+  if (password) payload.password = password;
+
+  const { data, error } = await supabaseClient.functions.invoke("admin-create-user", {
+    body: payload,
+  });
 
   if (error) {
-    showUserMessage("Non riesco a registrare la richiesta utente.", "error");
+    showUserMessage("Non riesco a creare l'utente. Controlla i secrets Supabase.", "error");
     return;
   }
 
   userForm.reset();
   showUserMessage(
-    password
-      ? "Richiesta salvata. Crea l'utente in Supabase Auth con questa password temporanea."
-      : "Richiesta salvata. Invia l'invito/reset password da Supabase Auth.",
+    data?.passwordResetSent
+      ? "Utente creato. Email inviata per impostare la password."
+      : "Utente creato con password temporanea.",
     "ok"
   );
 }

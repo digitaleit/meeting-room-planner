@@ -15,7 +15,7 @@ Funziona in due modi:
 - Lista delle prossime prenotazioni.
 - Login con Supabase Auth.
 - Profilo admin per `digitaleit`.
-- Area admin per registrare richieste di nuovi utenti.
+- Area admin per creare nuovi utenti.
 - Email di conferma prenotazione con allegato calendario `.ics`.
 - Copia admin di ogni prenotazione a `stefano@stefanoserra.it`.
 - Controllo sovrapposizioni lato browser.
@@ -29,6 +29,7 @@ Funziona in due modi:
 - `script.js`: logica prenotazioni, validazione, Supabase e fallback locale.
 - `supabase-setup.sql`: script pronto da copiare in Supabase.
 - `supabase/functions/send-booking-email/index.ts`: funzione Supabase per inviare email e calendario.
+- `supabase/functions/admin-create-user/index.ts`: funzione Supabase per creare utenti Auth e profili.
 
 ## Configurare Supabase Free
 
@@ -82,39 +83,18 @@ Lo script collega quell'utente al profilo:
 
 ## Nuovi utenti
 
-L'area admin salva una richiesta utente con:
+L'area admin crea davvero un account Supabase Auth e il relativo profilo `profiles`.
+
+Campi richiesti:
 
 - user
 - azienda
 - email
-- indicazione se esiste una password temporanea
+- password temporanea opzionale
 
-Per creare davvero un account login hai due strade:
+Se inserisci una password, l'utente potra accedere con quella. Se lasci la password vuota, la funzione crea una password temporanea casuale e invia all'utente la mail Supabase per impostare la propria password.
 
-1. **Manuale, subito disponibile**
-   - Vai in **Authentication** -> **Users**.
-   - Crea l'utente con email e password temporanea.
-   - Se non vuoi impostare una password, usa l'invio invito/reset password di Supabase.
-   - Aggiungi o aggiorna il profilo in `profiles`.
-
-Esempio profilo da inserire in **SQL Editor** dopo aver creato l'utente Auth:
-
-```sql
-insert into public.profiles (id, username, company, email, is_admin)
-select id, 'nomeutente', 'Azienda ABC', 'utente@example.com', false
-from auth.users
-where email = 'utente@example.com'
-on conflict (id) do update
-set username = excluded.username,
-    company = excluded.company,
-    email = excluded.email,
-    is_admin = excluded.is_admin;
-```
-
-2. **Automatica, piu professionale**
-   - Crea una Supabase Edge Function con `service_role key`.
-   - La funzione crea l'utente Auth, inserisce il profilo e invia la mail di impostazione password.
-   - La `service_role key` deve stare solo nei secrets della funzione, mai in `script.js`.
+Questa parte usa la funzione `admin-create-user`, che richiede il secret `SERVICE_ROLE_KEY`. La `service_role key` deve stare solo nei secrets Supabase, mai in `script.js`.
 
 ## Email prenotazioni e calendario
 
@@ -144,7 +124,9 @@ supabase secrets set BREVO_API_KEY="la_tua_brevo_api_key"
 supabase secrets set BREVO_SENDER_EMAIL="stefano@stefanoserra.it"
 supabase secrets set BREVO_SENDER_NAME="Meeting Room Planner"
 supabase secrets set ADMIN_EMAIL="stefano@stefanoserra.it"
+supabase secrets set SERVICE_ROLE_KEY="la_tua_service_role_key"
 supabase functions deploy send-booking-email
+supabase functions deploy admin-create-user
 ```
 
 Dopo il deploy, quando un utente prenota, la webapp chiama la funzione `send-booking-email`. Se la funzione non e ancora configurata, la prenotazione viene comunque salvata, ma compare un avviso sull'email non inviata.
