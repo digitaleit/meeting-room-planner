@@ -1,5 +1,5 @@
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
+const SUPABASE_URL = "https://zpiocrzswxjnfvyeinsi.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_LWvvRv0mgLBP4_102dLKEA_8a0Txygk";
 
 const STORAGE_KEY = "meeting-room-bookings-v2";
 const AUTO_REFRESH_MS = 30000;
