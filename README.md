@@ -22,13 +22,16 @@ Funziona in due modi:
 - `index.html`: struttura della pagina.
 - `style.css`: stile responsive.
 - `script.js`: logica prenotazioni, validazione, Supabase e fallback locale.
+- `supabase-setup.sql`: script pronto da copiare in Supabase.
 
 ## Configurare Supabase Free
 
 1. Crea un account su [Supabase](https://supabase.com/).
 2. Crea un nuovo progetto.
 3. Apri **SQL Editor**.
-4. Esegui questo script:
+4. Copia il contenuto di `supabase-setup.sql`, incollalo nell'editor ed eseguilo.
+
+Lo script crea questa struttura:
 
 ```sql
 create table if not exists public.bookings (
@@ -111,6 +114,18 @@ const SUPABASE_ANON_KEY = "la-tua-anon-public-key";
 
 8. In Supabase apri **Database** -> **Replication** e verifica che la tabella `bookings` sia abilitata per Realtime.
 
+9. Fai commit e push della modifica a `script.js`.
+10. Dopo il deploy automatico di GitHub Pages, la card in alto deve mostrare **Modalita condivisa**.
+
+## Cosa devi incollarmi per attivarla
+
+Mandami solo questi due valori Supabase:
+
+- `Project URL`, simile a `https://xxxxxxxx.supabase.co`
+- `anon public key`
+
+Non mandarmi la `service_role key`: quella e privata e non va mai messa in una webapp pubblica.
+
 ## Pubblicare gratis su GitHub Pages
 
 1. Crea un repository GitHub, per esempio `meeting-room-planner`.
@@ -118,6 +133,7 @@ const SUPABASE_ANON_KEY = "la-tua-anon-public-key";
    - `index.html`
    - `style.css`
    - `script.js`
+   - `supabase-setup.sql`
    - `README.md`
 3. Su GitHub apri **Settings** -> **Pages**.
 4. In **Build and deployment** scegli:
