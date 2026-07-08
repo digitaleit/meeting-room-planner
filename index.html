@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Planner Sala Riunioni</title>
+  <meta
+    name="description"
+    content="Webapp statica per prenotare una sala riunioni in coworking, con versione condivisa Supabase."
+  >
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="hero" aria-labelledby="pageTitle">
+      <div class="hero-copy">
+        <p class="eyebrow">Coworking</p>
+        <h1 id="pageTitle">Planner Sala Riunioni</h1>
+        <p class="subtitle">Prenota la sala comune, evita sovrapposizioni e consulta subito la settimana.</p>
+      </div>
+
+      <div class="status-card" aria-live="polite">
+        <span id="roomStatus" class="status free">Libera ora</span>
+        <small id="nextBooking">Nessuna prenotazione imminente</small>
+        <span id="syncStatus" class="sync-status">Modalita locale</span>
+      </div>
+    </header>
+
+    <section class="grid">
+      <section class="panel booking-panel" aria-labelledby="formTitle">
+        <div>
+          <h2 id="formTitle">Nuova prenotazione</h2>
+          <p class="panel-note">Gli orari sovrapposti vengono bloccati prima del salvataggio.</p>
+        </div>
+
+        <form id="bookingForm" class="form">
+          <label>
+            Nome
+            <input id="name" name="name" type="text" autocomplete="name" placeholder="Es. Stefano" maxlength="80" required>
+          </label>
+
+          <label>
+            Azienda / Team
+            <input id="company" name="company" type="text" autocomplete="organization" placeholder="Es. TMAP" maxlength="100" required>
+          </label>
+
+          <label>
+            Data
+            <input id="date" name="date" type="date" required>
+          </label>
+
+          <div class="time-fields">
+            <label>
+              Ora inizio
+              <input id="start_time" name="start_time" type="time" min="08:00" max="20:00" step="900" required>
+            </label>
+
+            <label>
+              Ora fine
+              <input id="end_time" name="end_time" type="time" min="08:00" max="20:00" step="900" required>
+            </label>
+          </div>
+
+          <label>
+            Note
+            <textarea id="notes" name="notes" rows="4" placeholder="Es. call cliente, colloquio, riunione interna..." maxlength="300"></textarea>
+          </label>
+
+          <button type="submit">Prenota sala</button>
+          <p id="message" class="message" role="status"></p>
+        </form>
+      </section>
+
+      <section class="panel list-panel" aria-labelledby="listTitle">
+        <div class="list-heading">
+          <div>
+            <h2 id="listTitle">Lista prenotazioni</h2>
+            <p id="bookingCount" class="panel-note">Caricamento prenotazioni.</p>
+          </div>
+          <button id="clearLocal" class="secondary" type="button">Pulisci locale</button>
+        </div>
+
+        <div id="bookingList" class="booking-list" aria-live="polite"></div>
+      </section>
+    </section>
+
+    <section class="week-shell" aria-labelledby="weekTitle">
+      <div class="toolbar">
+        <button id="prevWeek" class="secondary" type="button" aria-label="Settimana precedente">←</button>
+        <div>
+          <h2 id="weekTitle">Calendario settimanale</h2>
+          <strong id="weekLabel"></strong>
+        </div>
+        <button id="nextWeek" class="secondary" type="button" aria-label="Settimana successiva">→</button>
+      </div>
+
+      <div class="calendar-wrap">
+        <section class="calendar" id="calendar" aria-live="polite"></section>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js"></script>
+</body>
+</html>
