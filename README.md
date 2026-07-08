@@ -16,6 +16,8 @@ Funziona in due modi:
 - Login con Supabase Auth.
 - Profilo admin per `digitaleit`.
 - Area admin per registrare richieste di nuovi utenti.
+- Email di conferma prenotazione con allegato calendario `.ics`.
+- Copia admin di ogni prenotazione a `stefano@stefanoserra.it`.
 - Controllo sovrapposizioni lato browser.
 - Controllo sovrapposizioni lato database con trigger Supabase.
 - Nessun framework: solo file statici.
@@ -26,6 +28,7 @@ Funziona in due modi:
 - `style.css`: stile responsive.
 - `script.js`: logica prenotazioni, validazione, Supabase e fallback locale.
 - `supabase-setup.sql`: script pronto da copiare in Supabase.
+- `supabase/functions/send-booking-email/index.ts`: funzione Supabase per inviare email e calendario.
 
 ## Configurare Supabase Free
 
@@ -115,15 +118,37 @@ set username = excluded.username,
 
 ## Email prenotazioni e calendario
 
-GitHub Pages non puo inviare email direttamente in modo sicuro. Per inviare:
+GitHub Pages non puo inviare email direttamente in modo sicuro. Per questo il progetto include una Supabase Edge Function in `supabase/functions/send-booking-email/index.ts`.
+
+La funzione invia:
 
 - conferma prenotazione all'utente;
 - copia admin a `stefano@stefanoserra.it`;
-- allegato `.ics` per il calendario personale;
+- allegato `.ics` per il calendario personale.
 
-serve una Supabase Edge Function collegata a un provider email, per esempio Resend, Brevo o SendGrid. Anche questa puo restare in fascia gratuita per un uso leggero.
+### Configurare Resend
 
-La funzione dovrebbe partire quando viene creata una prenotazione, generare un file iCal e inviare le email. La webapp e gia pronta lato dati: ogni prenotazione ha `user_id`, nome, azienda, data, inizio, fine e note.
+1. Crea un account su [Resend](https://resend.com/).
+2. Crea una API key.
+3. Se non configuri un dominio, in fase test usa il mittente `onboarding@resend.dev`.
+4. Per produzione, configura un dominio verificato e usa un mittente tipo `Sala Riunioni <prenotazioni@tuodominio.it>`.
+
+Nota: senza dominio verificato, Resend puo limitare l'invio alle email verificate nel tuo account. Per inviare a tutti gli utenti del coworking serve verificare un dominio.
+
+### Deploy funzione Supabase
+
+Installa la Supabase CLI, poi dalla cartella del progetto esegui:
+
+```bash
+supabase login
+supabase link --project-ref zpiocrzswxjnfvyeinsi
+supabase secrets set RESEND_API_KEY="la_tua_resend_api_key"
+supabase secrets set FROM_EMAIL="Meeting Room Planner <onboarding@resend.dev>"
+supabase secrets set ADMIN_EMAIL="stefano@stefanoserra.it"
+supabase functions deploy send-booking-email
+```
+
+Dopo il deploy, quando un utente prenota, la webapp chiama la funzione `send-booking-email`. Se la funzione non e ancora configurata, la prenotazione viene comunque salvata, ma compare un avviso sull'email non inviata.
 
 ## Pubblicare gratis su GitHub Pages
 

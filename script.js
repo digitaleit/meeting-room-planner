@@ -260,9 +260,12 @@ async function handleSubmit(event) {
   }
 
   try {
+    let emailWarning = false;
+
     if (supabaseClient) {
-      await saveRemoteBooking(booking);
+      const savedBooking = await saveRemoteBooking(booking);
       await loadBookings();
+      emailWarning = !(await sendBookingEmail(savedBooking || booking));
     } else {
       bookings = saveLocalBooking(booking);
       render();
@@ -274,7 +277,12 @@ async function handleSubmit(event) {
     startInput.value = booking.end_time;
     endInput.value = addMinutes(booking.end_time, 60);
     currentMonday = getMonday(new Date(`${booking.date}T12:00:00`));
-    showMessage("Prenotazione confermata.", "ok");
+    showMessage(
+      emailWarning
+        ? "Prenotazione confermata. Email calendario non inviata: verifica la funzione Supabase."
+        : "Prenotazione confermata. Email calendario inviata.",
+      "ok"
+    );
   } catch (error) {
     const isOverlap = String(error.message || "").includes("overlapping booking");
     showMessage(
@@ -324,8 +332,32 @@ function hasOverlap(candidate, list) {
 }
 
 async function saveRemoteBooking(booking) {
-  const { error } = await supabaseClient.from("bookings").insert(booking);
+  const { data, error } = await supabaseClient
+    .from("bookings")
+    .insert(booking)
+    .select("id,user_id,name,company,date,start_time,end_time,notes,created_at")
+    .single();
+
   if (error) throw error;
+  return data;
+}
+
+async function sendBookingEmail(booking) {
+  if (!supabaseClient || !currentProfile?.email) return false;
+
+  const { error } = await supabaseClient.functions.invoke("send-booking-email", {
+    body: {
+      booking,
+      attendeeEmail: currentProfile.email,
+    },
+  });
+
+  if (error) {
+    console.warn("Booking email failed", error);
+    return false;
+  }
+
+  return true;
 }
 
 function saveLocalBooking(booking) {
