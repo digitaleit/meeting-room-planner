@@ -16,9 +16,7 @@ const loginPassword = document.querySelector("#loginPassword");
 const logoutButton = document.querySelector("#logoutButton");
 const userBadge = document.querySelector("#userBadge");
 const bookingForm = document.querySelector("#bookingForm");
-const userForm = document.querySelector("#userForm");
-const userMessage = document.querySelector("#userMessage");
-const adminPanel = document.querySelector("#adminPanel");
+const usersLink = document.querySelector("#usersLink");
 const calendar = document.querySelector("#calendar");
 const bookingList = document.querySelector("#bookingList");
 const bookingCount = document.querySelector("#bookingCount");
@@ -84,7 +82,6 @@ function bindEvents() {
   loginForm.addEventListener("submit", handleLogin);
   resetPasswordButton.addEventListener("click", sendPasswordReset);
   logoutButton.addEventListener("click", logout);
-  userForm.addEventListener("submit", registerUserRequest);
 
   document.querySelector("#prevWeek").addEventListener("click", () => {
     currentMonday.setDate(currentMonday.getDate() - 7);
@@ -165,7 +162,7 @@ function showLogin() {
   unsubscribeFromRealtime();
   app.classList.add("hidden");
   authScreen.classList.remove("hidden");
-  adminPanel.classList.add("hidden");
+  usersLink.classList.add("hidden");
   userBadge.textContent = "Utente non autenticato";
   render();
 }
@@ -195,7 +192,7 @@ function applyProfile() {
   nameInput.value = displayName;
   companyInput.value = currentProfile.company || "";
   userBadge.textContent = `${displayName}${currentProfile.is_admin ? " · admin" : ""}`;
-  adminPanel.classList.toggle("hidden", !currentProfile.is_admin);
+  usersLink.classList.toggle("hidden", !currentProfile.is_admin);
 }
 
 function updateSyncStatus() {
@@ -372,44 +369,6 @@ function saveLocalBooking(booking) {
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(nextBookings));
   return nextBookings;
-}
-
-async function registerUserRequest(event) {
-  event.preventDefault();
-
-  if (!currentProfile?.is_admin) {
-    showUserMessage("Solo l'amministratore puo registrare utenti.", "error");
-    return;
-  }
-
-  showUserMessage("Creazione utente in corso...", "");
-
-  const formData = new FormData(userForm);
-  const payload = {
-    username: cleanText(formData.get("username")),
-    company: cleanText(formData.get("company")),
-    email: cleanText(formData.get("email")).toLowerCase(),
-  };
-  const password = String(formData.get("password") || "").trim();
-
-  if (password) payload.password = password;
-
-  const { data, error } = await supabaseClient.functions.invoke("admin-create-user", {
-    body: payload,
-  });
-
-  if (error) {
-    showUserMessage("Non riesco a creare l'utente. Controlla i secrets Supabase.", "error");
-    return;
-  }
-
-  userForm.reset();
-  showUserMessage(
-    data?.passwordResetSent
-      ? "Utente creato. Email inviata per impostare la password."
-      : "Utente creato con password temporanea.",
-    "ok"
-  );
 }
 
 function subscribeToRealtime() {
@@ -594,11 +553,6 @@ function showMessage(text, type) {
 function showAuthMessage(text, type) {
   authMessage.textContent = text;
   authMessage.className = type ? `message ${type}` : "message";
-}
-
-function showUserMessage(text, type) {
-  userMessage.textContent = text;
-  userMessage.className = type ? `message ${type}` : "message";
 }
 
 function escapeHtml(text) {

@@ -5,6 +5,7 @@ const corsHeaders = {
 };
 
 type CreateUserPayload = {
+  action?: "list" | "upsert" | "reset";
   username: string;
   company: string;
   email: string;
@@ -44,6 +45,19 @@ Deno.serve(async (request) => {
   }
 
   const payload = await request.json() as CreateUserPayload;
+  const action = payload.action || "upsert";
+
+  if (action === "list") {
+    const users = await listProfiles(supabaseUrl, serviceRoleKey);
+    return jsonResponse({ ok: true, users });
+  }
+
+  if (action === "reset") {
+    if (!payload.email?.includes("@")) return jsonResponse({ error: "Missing valid email" }, 400);
+    await sendPasswordReset(supabaseUrl, anonKey, payload.email.trim().toLowerCase(), request.headers.get("Origin") || undefined);
+    return jsonResponse({ ok: true, passwordResetSent: true });
+  }
+
   const validationError = validatePayload(payload);
 
   if (validationError) {
@@ -161,6 +175,23 @@ async function createOrUpdateAuthUser(
   }
 
   return await updated.json();
+}
+
+async function listProfiles(supabaseUrl: string, serviceRoleKey: string) {
+  const url = new URL(`${supabaseUrl}/rest/v1/profiles`);
+  url.searchParams.set("select", "id,username,company,email,is_admin,created_at");
+  url.searchParams.set("order", "username.asc");
+
+  const response = await fetch(url, {
+    headers: serviceHeaders(serviceRoleKey),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Unable to list profiles");
+  }
+
+  return await response.json();
 }
 
 async function getAuthUserByEmail(supabaseUrl: string, serviceRoleKey: string, email: string) {

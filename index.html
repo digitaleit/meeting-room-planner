@@ -8,7 +8,7 @@
     name="description"
     content="Webapp statica per prenotare una sala riunioni in coworking, con versione condivisa Supabase."
   >
-  <link rel="stylesheet" href="style.css?v=email-ics-1">
+  <link rel="stylesheet" href="style.css?v=users-page-1">
 </head>
 <body>
   <section class="auth-screen" id="authScreen">
@@ -46,6 +46,7 @@
         <small id="nextBooking">Nessuna prenotazione imminente</small>
         <span id="syncStatus" class="sync-status">Modalita locale</span>
         <small id="userBadge">Utente non autenticato</small>
+        <a id="usersLink" class="secondary nav-button hidden" href="users.html">Gestione utenti</a>
         <button id="logoutButton" class="secondary" type="button">Esci</button>
       </div>
     </header>
@@ -123,42 +124,9 @@
       </div>
     </section>
 
-    <section class="admin-panel panel hidden" id="adminPanel" aria-labelledby="adminTitle">
-      <div class="list-heading">
-        <div>
-          <h2 id="adminTitle">Gestione utenti</h2>
-          <p class="panel-note">Area amministratore. Gli inviti email richiedono la funzione Supabase indicata nel README.</p>
-        </div>
-      </div>
-
-      <form id="userForm" class="admin-form">
-        <label>
-          User
-          <input id="newUsername" name="username" type="text" autocomplete="off" maxlength="60" required>
-        </label>
-
-        <label>
-          Email
-          <input id="newEmail" name="email" type="email" autocomplete="email" required>
-        </label>
-
-        <label>
-          Azienda
-          <input id="newCompany" name="company" type="text" autocomplete="organization" maxlength="100" required>
-        </label>
-
-        <label>
-          Password temporanea
-          <input id="newPassword" name="password" type="password" autocomplete="new-password" placeholder="Lascia vuota per invito/reset">
-        </label>
-
-        <button type="submit">Registra richiesta utente</button>
-        <p id="userMessage" class="message" role="status"></p>
-      </form>
-    </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="script.js?v=admin-create-user-1"></script>
+  <script src="script.js?v=users-page-1"></script>
 </body>
 </html>

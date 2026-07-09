@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestione Utenti - Planner Sala Riunioni</title>
+  <meta
+    name="description"
+    content="Gestione utenti amministratore per il planner sala riunioni."
+  >
+  <link rel="stylesheet" href="style.css?v=users-page-1">
+</head>
+<body>
+  <section class="auth-screen" id="authScreen">
+    <form class="auth-card" id="loginForm">
+      <p class="eyebrow">Accesso admin</p>
+      <h1>Gestione Utenti</h1>
+      <p class="subtitle">Accedi con un account amministratore.</p>
+
+      <label>
+        Email
+        <input id="loginEmail" name="email" type="email" autocomplete="email" required>
+      </label>
+
+      <label>
+        Password
+        <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
+      </label>
+
+      <button type="submit">Accedi</button>
+      <button class="ghost-link" id="resetPassword" type="button">Imposta o recupera password</button>
+      <p id="authMessage" class="message" role="status"></p>
+    </form>
+  </section>
+
+  <main class="app hidden">
+    <header class="hero compact-hero" aria-labelledby="pageTitle">
+      <div class="hero-copy">
+        <p class="eyebrow">Amministrazione</p>
+        <h1 id="pageTitle">Gestione utenti</h1>
+        <p class="subtitle">Crea account, imposta password temporanee e invia reset password via email.</p>
+      </div>
+
+      <div class="status-card">
+        <small id="userBadge">Utente non autenticato</small>
+        <a class="secondary nav-button" href="index.html">Prenotazioni</a>
+        <button id="logoutButton" class="secondary" type="button">Esci</button>
+      </div>
+    </header>
+
+    <section class="grid user-management-grid">
+      <section class="panel" aria-labelledby="formTitle">
+        <div>
+          <h2 id="formTitle">Aggiungi utente</h2>
+          <p class="panel-note">Lascia vuota la password per inviare una mail di impostazione password.</p>
+        </div>
+
+        <form id="userForm" class="form">
+          <label>
+            User
+            <input id="newUsername" name="username" type="text" autocomplete="off" maxlength="60" required>
+          </label>
+
+          <label>
+            Azienda
+            <input id="newCompany" name="company" type="text" autocomplete="organization" maxlength="100" required>
+          </label>
+
+          <label>
+            Email
+            <input id="newEmail" name="email" type="email" autocomplete="email" required>
+          </label>
+
+          <label>
+            Password temporanea
+            <input id="newPassword" name="password" type="password" autocomplete="new-password" placeholder="Opzionale">
+          </label>
+
+          <button type="submit">Crea utente</button>
+          <p id="userMessage" class="message" role="status"></p>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="usersTitle">
+        <div class="list-heading">
+          <div>
+            <h2 id="usersTitle">Utenti</h2>
+            <p id="usersSummary" class="panel-note">Caricamento utenti.</p>
+          </div>
+          <button id="refreshUsers" class="secondary" type="button">Aggiorna</button>
+        </div>
+
+        <div id="usersList" class="users-list" aria-live="polite"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="users.js?v=users-page-1"></script>
+</body>
+</html>

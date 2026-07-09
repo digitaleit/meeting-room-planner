@@ -25,8 +25,10 @@ Funziona in due modi:
 ## File del progetto
 
 - `index.html`: struttura della pagina.
+- `users.html`: pagina amministratore per la gestione utenti.
 - `style.css`: stile responsive.
 - `script.js`: logica prenotazioni, validazione, Supabase e fallback locale.
+- `users.js`: logica login admin, lista utenti, creazione utenti e reset password.
 - `supabase-setup.sql`: script pronto da copiare in Supabase.
 - `supabase/functions/send-booking-email/index.ts`: funzione Supabase per inviare email e calendario.
 - `supabase/functions/admin-create-user/index.ts`: funzione Supabase per creare utenti Auth e profili.
@@ -83,7 +85,9 @@ Lo script collega quell'utente al profilo:
 
 ## Nuovi utenti
 
-L'area admin crea davvero un account Supabase Auth e il relativo profilo `profiles`.
+La gestione utenti si trova nella pagina `users.html`, raggiungibile dal pulsante **Gestione utenti** visibile solo agli admin.
+
+La pagina crea davvero un account Supabase Auth e il relativo profilo `profiles`.
 
 Campi richiesti:
 
@@ -93,6 +97,12 @@ Campi richiesti:
 - password temporanea opzionale
 
 Se inserisci una password, l'utente potra accedere con quella. Se lasci la password vuota, la funzione crea una password temporanea casuale e invia all'utente la mail Supabase per impostare la propria password.
+
+Nella stessa pagina puoi:
+
+- vedere tutti gli utenti;
+- impostare una nuova password temporanea;
+- inviare un reset password via email.
 
 Questa parte usa la funzione `admin-create-user`, che richiede il secret `SERVICE_ROLE_KEY`. La `service_role key` deve stare solo nei secrets Supabase, mai in `script.js`.
 
@@ -136,8 +146,10 @@ Dopo il deploy, quando un utente prenota, la webapp chiama la funzione `send-boo
 1. Crea un repository GitHub, per esempio `meeting-room-planner`.
 2. Carica questi file nella root del repository:
    - `index.html`
+   - `users.html`
    - `style.css`
    - `script.js`
+   - `users.js`
    - `supabase-setup.sql`
    - `README.md`
 3. Su GitHub apri **Settings** -> **Pages**.

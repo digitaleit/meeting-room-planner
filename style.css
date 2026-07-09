@@ -80,6 +80,17 @@ button {
   font-weight: 800;
 }
 
+a.nav-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 0 18px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
 button:hover {
   background: var(--primary-dark);
 }
@@ -102,6 +113,10 @@ p {
   gap: 24px;
   align-items: stretch;
   margin-bottom: 24px;
+}
+
+.compact-hero h1 {
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
 }
 
 .hero-copy,
@@ -381,6 +396,51 @@ textarea:focus {
   grid-column: 1 / -1;
 }
 
+.user-management-grid {
+  grid-template-columns: minmax(320px, 420px) 1fr;
+}
+
+.users-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.user-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(280px, 1.3fr);
+  gap: 16px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--primary);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.user-row strong,
+.user-row span,
+.user-row small {
+  display: block;
+}
+
+.user-row span {
+  margin-top: 4px;
+  font-weight: 800;
+}
+
+.user-row small {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.user-actions {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
 .toolbar {
   margin-bottom: 18px;
 }
@@ -474,6 +534,12 @@ textarea:focus {
   }
 
   .admin-form {
+    grid-template-columns: 1fr;
+  }
+
+  .user-management-grid,
+  .user-row,
+  .user-actions {
     grid-template-columns: 1fr;
   }
 }
