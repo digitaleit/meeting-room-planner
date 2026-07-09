@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Imposta Password - Planner Sala Riunioni</title>
+  <meta name="description" content="Imposta una nuova password per il planner sala riunioni.">
+  <link rel="stylesheet" href="style.css?v=reset-password-1">
+</head>
+<body>
+  <main class="auth-screen">
+    <form class="auth-card" id="resetForm">
+      <p class="eyebrow">Password</p>
+      <h1>Imposta password</h1>
+      <p class="subtitle">Scegli una nuova password per accedere al planner.</p>
+
+      <label>
+        Nuova password
+        <input id="newPassword" name="password" type="password" autocomplete="new-password" minlength="8" required>
+      </label>
+
+      <label>
+        Conferma password
+        <input id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+      </label>
+
+      <button type="submit">Salva password</button>
+      <p id="resetMessage" class="message" role="status"></p>
+    </form>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="reset.js?v=reset-password-1"></script>
+</body>
+</html>

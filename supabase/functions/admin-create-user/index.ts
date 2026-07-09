@@ -24,6 +24,7 @@ Deno.serve(async (request) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SERVICE_ROLE_KEY");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://digitaleit.github.io/meeting-room-planner";
   const authToken = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
 
   if (!supabaseUrl || !serviceRoleKey || !anonKey) {
@@ -54,7 +55,7 @@ Deno.serve(async (request) => {
 
   if (action === "reset") {
     if (!payload.email?.includes("@")) return jsonResponse({ error: "Missing valid email" }, 400);
-    await sendPasswordReset(supabaseUrl, anonKey, payload.email.trim().toLowerCase(), request.headers.get("Origin") || undefined);
+    await sendPasswordReset(supabaseUrl, anonKey, payload.email.trim().toLowerCase(), appBaseUrl);
     return jsonResponse({ ok: true, passwordResetSent: true });
   }
 
@@ -83,7 +84,7 @@ Deno.serve(async (request) => {
   });
 
   if (shouldSendReset) {
-    await sendPasswordReset(supabaseUrl, anonKey, email, request.headers.get("Origin") || undefined);
+    await sendPasswordReset(supabaseUrl, anonKey, email, appBaseUrl);
   }
 
   return jsonResponse({
@@ -236,7 +237,7 @@ async function upsertProfile(
   }
 }
 
-async function sendPasswordReset(supabaseUrl: string, anonKey: string, email: string, origin?: string) {
+async function sendPasswordReset(supabaseUrl: string, anonKey: string, email: string, appBaseUrl: string) {
   const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
     method: "POST",
     headers: {
@@ -246,7 +247,7 @@ async function sendPasswordReset(supabaseUrl: string, anonKey: string, email: st
     body: JSON.stringify({
       email,
       gotrue_meta_security: {},
-      redirect_to: origin,
+      redirect_to: `${appBaseUrl.replace(/\/$/, "")}/reset.html`,
     }),
   });
 

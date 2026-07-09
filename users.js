@@ -69,7 +69,7 @@ async function sendPasswordReset() {
   }
 
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.href,
+    redirectTo: `${window.location.origin}${window.location.pathname.replace(/users\.html$/, "")}reset.html`,
   });
 
   showAuthMessage(

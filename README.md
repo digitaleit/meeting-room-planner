@@ -26,9 +26,11 @@ Funziona in due modi:
 
 - `index.html`: struttura della pagina.
 - `users.html`: pagina amministratore per la gestione utenti.
+- `reset.html`: pagina per impostare una nuova password da link email.
 - `style.css`: stile responsive.
 - `script.js`: logica prenotazioni, validazione, Supabase e fallback locale.
 - `users.js`: logica login admin, lista utenti, creazione utenti e reset password.
+- `reset.js`: logica aggiornamento password.
 - `supabase-setup.sql`: script pronto da copiare in Supabase.
 - `supabase/functions/send-booking-email/index.ts`: funzione Supabase per inviare email e calendario.
 - `supabase/functions/admin-create-user/index.ts`: funzione Supabase per creare utenti Auth e profili.
@@ -135,6 +137,7 @@ supabase secrets set BREVO_SENDER_EMAIL="stefano@stefanoserra.it"
 supabase secrets set BREVO_SENDER_NAME="Meeting Room Planner"
 supabase secrets set ADMIN_EMAIL="stefano@stefanoserra.it"
 supabase secrets set SERVICE_ROLE_KEY="la_tua_service_role_key"
+supabase secrets set APP_BASE_URL="https://digitaleit.github.io/meeting-room-planner"
 supabase functions deploy send-booking-email
 supabase functions deploy admin-create-user
 ```
@@ -147,9 +150,11 @@ Dopo il deploy, quando un utente prenota, la webapp chiama la funzione `send-boo
 2. Carica questi file nella root del repository:
    - `index.html`
    - `users.html`
+   - `reset.html`
    - `style.css`
    - `script.js`
    - `users.js`
+   - `reset.js`
    - `supabase-setup.sql`
    - `README.md`
 3. Su GitHub apri **Settings** -> **Pages**.
