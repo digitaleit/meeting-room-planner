@@ -13,90 +13,97 @@ type CreateUserPayload = {
 };
 
 Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  try {
+    if (request.method === "OPTIONS") {
+      return new Response("ok", { headers: corsHeaders });
+    }
 
-  if (request.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
-  }
+    if (request.method !== "POST") {
+      return jsonResponse({ error: "Method not allowed" }, 405);
+    }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SERVICE_ROLE_KEY");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://digitaleit.github.io/meeting-room-planner";
-  const authToken = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SERVICE_ROLE_KEY");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://digitaleit.github.io/meeting-room-planner";
+    const authToken = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
 
-  if (!supabaseUrl || !serviceRoleKey || !anonKey) {
-    return jsonResponse({ error: "Missing Supabase secrets" }, 500);
-  }
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+      return jsonResponse({ error: "Missing Supabase secrets" }, 500);
+    }
 
-  if (!authToken) {
-    return jsonResponse({ error: "Missing authorization" }, 401);
-  }
+    if (!authToken) {
+      return jsonResponse({ error: "Missing authorization" }, 401);
+    }
 
-  const caller = await getCaller(supabaseUrl, authToken, anonKey);
-  if (!caller?.id) {
-    return jsonResponse({ error: "Invalid user" }, 401);
-  }
+    const caller = await getCaller(supabaseUrl, authToken, anonKey);
+    if (!caller?.id) {
+      return jsonResponse({ error: "Invalid user" }, 401);
+    }
 
-  const isAdmin = await checkAdmin(supabaseUrl, serviceRoleKey, caller.id);
-  if (!isAdmin) {
-    return jsonResponse({ error: "Admin only" }, 403);
-  }
+    const isAdmin = await checkAdmin(supabaseUrl, serviceRoleKey, caller.id);
+    if (!isAdmin) {
+      return jsonResponse({ error: "Admin only" }, 403);
+    }
 
-  const payload = await request.json() as CreateUserPayload;
-  const action = payload.action || "upsert";
+    const payload = await request.json() as CreateUserPayload;
+    const action = payload.action || "upsert";
 
-  if (action === "list") {
-    const users = await listProfiles(supabaseUrl, serviceRoleKey);
-    return jsonResponse({ ok: true, users });
-  }
+    if (action === "list") {
+      const users = await listProfiles(supabaseUrl, serviceRoleKey);
+      return jsonResponse({ ok: true, users });
+    }
 
-  if (action === "reset") {
-    if (!payload.email?.includes("@")) return jsonResponse({ error: "Missing valid email" }, 400);
-    await sendPasswordReset(supabaseUrl, anonKey, payload.email.trim().toLowerCase(), appBaseUrl);
-    return jsonResponse({ ok: true, passwordResetSent: true });
-  }
+    if (action === "reset") {
+      if (!payload.email?.includes("@")) return jsonResponse({ error: "Missing valid email" }, 400);
+      await sendPasswordReset(supabaseUrl, anonKey, payload.email.trim().toLowerCase(), appBaseUrl);
+      return jsonResponse({ ok: true, passwordResetSent: true });
+    }
 
-  const validationError = validatePayload(payload);
+    const validationError = validatePayload(payload);
 
-  if (validationError) {
-    return jsonResponse({ error: validationError }, 400);
-  }
+    if (validationError) {
+      return jsonResponse({ error: validationError }, 400);
+    }
 
-  const email = payload.email.trim().toLowerCase();
-  const password = payload.password?.trim() || generateTemporaryPassword();
-  const shouldSendReset = !payload.password?.trim();
+    const email = payload.email.trim().toLowerCase();
+    const password = payload.password?.trim() || generateTemporaryPassword();
+    const shouldSendReset = !payload.password?.trim();
 
-  const user = await createOrUpdateAuthUser(supabaseUrl, serviceRoleKey, {
-    email,
-    password,
-    username: payload.username.trim(),
-    company: payload.company.trim(),
-  });
-
-  await upsertProfile(supabaseUrl, serviceRoleKey, {
-    id: user.id,
-    username: payload.username.trim(),
-    company: payload.company.trim(),
-    email,
-  });
-
-  if (shouldSendReset) {
-    await sendPasswordReset(supabaseUrl, anonKey, email, appBaseUrl);
-  }
-
-  return jsonResponse({
-    ok: true,
-    user: {
-      id: user.id,
+    const user = await createOrUpdateAuthUser(supabaseUrl, serviceRoleKey, {
       email,
+      password,
       username: payload.username.trim(),
       company: payload.company.trim(),
-    },
-    passwordResetSent: shouldSendReset,
-  });
+    });
+
+    await upsertProfile(supabaseUrl, serviceRoleKey, {
+      id: user.id,
+      username: payload.username.trim(),
+      company: payload.company.trim(),
+      email,
+    });
+
+    if (shouldSendReset) {
+      await sendPasswordReset(supabaseUrl, anonKey, email, appBaseUrl);
+    }
+
+    return jsonResponse({
+      ok: true,
+      user: {
+        id: user.id,
+        email,
+        username: payload.username.trim(),
+        company: payload.company.trim(),
+      },
+      passwordResetSent: shouldSendReset,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unexpected error";
+    return jsonResponse({
+      error: message,
+    }, message.toLowerCase().includes("rate limit") ? 429 : 500);
+  }
 });
 
 async function getCaller(supabaseUrl: string, authToken: string, anonKey: string) {
@@ -252,8 +259,16 @@ async function sendPasswordReset(supabaseUrl: string, anonKey: string, email: st
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Unable to send password reset");
+    const error = await safeJson(response);
+    throw new Error(error.message || error.msg || `Unable to send password reset (${response.status})`);
+  }
+}
+
+async function safeJson(response: Response) {
+  try {
+    return await response.json();
+  } catch {
+    return { message: await response.text() };
   }
 }
 

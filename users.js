@@ -127,7 +127,7 @@ async function loadUsers() {
   });
 
   if (error) {
-    showUserMessage("Non riesco a caricare gli utenti.", "error");
+    showUserMessage(await getFunctionErrorMessage(error, "Non riesco a caricare gli utenti."), "error");
     return;
   }
 
@@ -154,7 +154,7 @@ async function saveUser(event) {
   });
 
   if (error) {
-    showUserMessage("Non riesco a salvare l'utente.", "error");
+    showUserMessage(await getFunctionErrorMessage(error, "Non riesco a salvare l'utente."), "error");
     return;
   }
 
@@ -188,7 +188,7 @@ async function setUserPassword(user) {
   });
 
   if (error) {
-    showUserMessage("Non riesco a impostare la password.", "error");
+    showUserMessage(await getFunctionErrorMessage(error, "Non riesco a impostare la password."), "error");
     return;
   }
 
@@ -204,10 +204,12 @@ async function sendUserReset(user) {
     },
   });
 
-  showUserMessage(
-    error ? `Non riesco a inviare il reset a ${user.email}.` : `Reset password inviato a ${user.email}.`,
-    error ? "error" : "ok"
-  );
+  if (error) {
+    showUserMessage(await getFunctionErrorMessage(error, `Non riesco a inviare il reset a ${user.email}.`), "error");
+    return;
+  }
+
+  showUserMessage(`Reset password inviato a ${user.email}.`, "ok");
 }
 
 function renderUsers() {
@@ -255,6 +257,20 @@ function showAuthMessage(text, type) {
 function showUserMessage(text, type) {
   userMessage.textContent = text;
   userMessage.className = type ? `message ${type}` : "message";
+}
+
+async function getFunctionErrorMessage(error, fallback) {
+  try {
+    const body = await error.context?.json();
+    if (body?.error === "email rate limit exceeded") {
+      return "Limite temporaneo email raggiunto. Riprova tra qualche minuto.";
+    }
+    if (body?.error) return body.error;
+  } catch {
+    // Keep the fallback message.
+  }
+
+  return fallback;
 }
 
 function escapeHtml(text) {
