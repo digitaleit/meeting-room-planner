@@ -8,7 +8,7 @@
     name="description"
     content="Webapp statica per prenotare una sala riunioni in coworking, con versione condivisa Supabase."
   >
-  <link rel="stylesheet" href="style.css?v=users-page-1">
+  <link rel="stylesheet" href="style.css?v=mobile-booking-1">
 </head>
 <body>
   <section class="auth-screen" id="authScreen">
@@ -86,6 +86,11 @@
             </label>
           </div>
 
+          <label class="checkbox-field">
+            <input id="allDay" name="all_day" type="checkbox">
+            Intera giornata
+          </label>
+
           <label>
             Note
             <textarea id="notes" name="notes" rows="4" placeholder="Es. call cliente, colloquio, riunione interna..." maxlength="300"></textarea>
@@ -115,6 +120,7 @@
         <div>
           <h2 id="weekTitle">Calendario settimanale</h2>
           <strong id="weekLabel"></strong>
+          <p class="calendar-hint">Tocca uno slot per prenotarlo. Su mobile puoi trascinare sullo stesso giorno per estendere la durata.</p>
         </div>
         <button id="nextWeek" class="secondary" type="button" aria-label="Settimana successiva">→</button>
       </div>
@@ -127,6 +133,6 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="script.js?v=users-page-1"></script>
+  <script src="script.js?v=mobile-booking-1"></script>
 </body>
 </html>

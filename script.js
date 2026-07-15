@@ -31,6 +31,7 @@ const endInput = document.querySelector("#end_time");
 const nameInput = document.querySelector("#name");
 const companyInput = document.querySelector("#company");
 const clearLocalButton = document.querySelector("#clearLocal");
+const allDayInput = document.querySelector("#allDay");
 
 const hasSupabaseConfig = SUPABASE_URL.startsWith("https://") && SUPABASE_ANON_KEY.length > 20;
 const supabaseClient = hasSupabaseConfig
@@ -42,6 +43,7 @@ let bookings = [];
 let currentUser = null;
 let currentProfile = null;
 let realtimeChannel = null;
+let calendarSelection = null;
 
 init();
 
@@ -82,6 +84,10 @@ function bindEvents() {
   loginForm.addEventListener("submit", handleLogin);
   resetPasswordButton.addEventListener("click", sendPasswordReset);
   logoutButton.addEventListener("click", logout);
+  dateInput.addEventListener("change", handleDateChange);
+  startInput.addEventListener("change", handleStartTimeChange);
+  endInput.addEventListener("change", handleEndTimeChange);
+  allDayInput.addEventListener("change", handleAllDayChange);
 
   document.querySelector("#prevWeek").addEventListener("click", () => {
     currentMonday.setDate(currentMonday.getDate() - 7);
@@ -107,6 +113,9 @@ function bindEvents() {
   });
 
   bookingForm.addEventListener("submit", handleSubmit);
+  calendar.addEventListener("pointerdown", startCalendarSelection);
+  calendar.addEventListener("pointerover", extendCalendarSelection);
+  window.addEventListener("pointerup", finishCalendarSelection);
 }
 
 async function handleLogin(event) {
@@ -270,9 +279,11 @@ async function handleSubmit(event) {
 
     bookingForm.reset();
     applyProfile();
+    allDayInput.checked = false;
+    startInput.readOnly = false;
+    endInput.readOnly = false;
     dateInput.value = booking.date;
-    startInput.value = booking.end_time;
-    endInput.value = addMinutes(booking.end_time, 60);
+    setDefaultTimesAfterBooking(booking);
     currentMonday = getMonday(new Date(`${booking.date}T12:00:00`));
     showMessage(
       emailWarning
@@ -453,6 +464,11 @@ function renderCalendar() {
       const date = formatDate(day);
       const slot = document.createElement("div");
       slot.className = "cell";
+      slot.dataset.date = date;
+      slot.dataset.hour = hour;
+      slot.setAttribute("role", "button");
+      slot.setAttribute("tabindex", "0");
+      slot.setAttribute("aria-label", `Prenota ${formatItalianDate(date)} alle ${hour}`);
 
       bookings
         .filter((item) => item.date === date && item.start_time.slice(0, 2) === hour.slice(0, 2))
@@ -460,6 +476,125 @@ function renderCalendar() {
 
       calendar.append(slot);
     });
+  });
+
+  markSelectedCalendarSlots();
+}
+
+function handleDateChange() {
+  if (!dateInput.value) return;
+  currentMonday = getMonday(new Date(`${dateInput.value}T12:00:00`));
+  renderCalendar();
+}
+
+function handleStartTimeChange() {
+  if (allDayInput.checked) return;
+  ensureEndAfterStart();
+  markSelectedCalendarSlots();
+}
+
+function handleEndTimeChange() {
+  if (allDayInput.checked) return;
+  ensureEndAfterStart();
+  markSelectedCalendarSlots();
+}
+
+function handleAllDayChange() {
+  if (allDayInput.checked) {
+    startInput.value = `${String(OPEN_HOUR).padStart(2, "0")}:00`;
+    endInput.value = `${String(CLOSE_HOUR).padStart(2, "0")}:00`;
+    startInput.readOnly = true;
+    endInput.readOnly = true;
+  } else {
+    startInput.readOnly = false;
+    endInput.readOnly = false;
+    ensureEndAfterStart();
+  }
+
+  markSelectedCalendarSlots();
+}
+
+function ensureEndAfterStart() {
+  if (!startInput.value) return;
+
+  if (!endInput.value || endInput.value <= startInput.value) {
+    endInput.value = addMinutes(startInput.value, 60);
+  }
+
+  if (endInput.value > `${String(CLOSE_HOUR).padStart(2, "0")}:00`) {
+    endInput.value = `${String(CLOSE_HOUR).padStart(2, "0")}:00`;
+  }
+
+  if (endInput.value <= startInput.value) {
+    startInput.value = addMinutes(endInput.value, -60);
+  }
+}
+
+function startCalendarSelection(event) {
+  const slot = event.target.closest(".cell[data-date][data-hour]");
+  if (!slot) return;
+
+  event.preventDefault();
+  const date = slot.dataset.date;
+  const start = slot.dataset.hour;
+  const end = addMinutes(start, 60);
+
+  calendarSelection = {
+    date,
+    start,
+    end,
+    pointerId: event.pointerId,
+  };
+
+  applyCalendarSelection(calendarSelection, true);
+}
+
+function extendCalendarSelection(event) {
+  if (!calendarSelection) return;
+
+  const slot = event.target.closest(".cell[data-date][data-hour]");
+  if (!slot || slot.dataset.date !== calendarSelection.date) return;
+
+  const hoveredStart = slot.dataset.hour;
+  const hoveredEnd = addMinutes(hoveredStart, 60);
+  calendarSelection.start = minTime(calendarSelection.start, hoveredStart);
+  calendarSelection.end = maxTime(calendarSelection.end, hoveredEnd);
+  applyCalendarSelection(calendarSelection);
+}
+
+function finishCalendarSelection() {
+  calendarSelection = null;
+}
+
+function applyCalendarSelection(selection, shouldScroll = false) {
+  allDayInput.checked = false;
+  startInput.readOnly = false;
+  endInput.readOnly = false;
+  dateInput.value = selection.date;
+  startInput.value = selection.start;
+  endInput.value = selection.end;
+  ensureEndAfterStart();
+  currentMonday = getMonday(new Date(`${selection.date}T12:00:00`));
+  markSelectedCalendarSlots();
+  showMessage(`Slot selezionato: ${formatItalianDate(selection.date)} ${startInput.value}-${endInput.value}.`, "ok");
+
+  if (shouldScroll) {
+    bookingForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function markSelectedCalendarSlots() {
+  const selectedDate = dateInput.value;
+  const selectedStart = startInput.value;
+  const selectedEnd = endInput.value;
+
+  calendar.querySelectorAll(".cell[data-date][data-hour]").forEach((slot) => {
+    const slotStart = slot.dataset.hour;
+    const slotEnd = addMinutes(slotStart, 60);
+    const selected = slot.dataset.date === selectedDate &&
+      selectedStart < slotEnd &&
+      selectedEnd > slotStart;
+    slot.classList.toggle("selected-slot", selected);
   });
 }
 
@@ -543,6 +678,28 @@ function addMinutes(time, minutes) {
   const date = new Date();
   date.setHours(hours, mins + minutes, 0, 0);
   return date.toTimeString().slice(0, 5);
+}
+
+function setDefaultTimesAfterBooking(booking) {
+  const closingTime = `${String(CLOSE_HOUR).padStart(2, "0")}:00`;
+
+  if (booking.end_time >= closingTime) {
+    startInput.value = `${String(OPEN_HOUR).padStart(2, "0")}:00`;
+    endInput.value = addMinutes(startInput.value, 60);
+    return;
+  }
+
+  startInput.value = booking.end_time;
+  endInput.value = addMinutes(booking.end_time, 60);
+  ensureEndAfterStart();
+}
+
+function minTime(first, second) {
+  return first <= second ? first : second;
+}
+
+function maxTime(first, second) {
+  return first >= second ? first : second;
 }
 
 function showMessage(text, type) {

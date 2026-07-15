@@ -69,6 +69,12 @@ textarea {
   font: inherit;
 }
 
+input:disabled,
+input:read-only {
+  background: var(--surface-soft, #f1eee7);
+  color: var(--muted);
+}
+
 button {
   min-height: 44px;
   border: 0;
@@ -281,6 +287,24 @@ textarea:focus {
   gap: 12px;
 }
 
+.checkbox-field {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  width: fit-content;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.checkbox-field input {
+  width: 18px;
+  min-height: 18px;
+  padding: 0;
+}
+
 .message {
   min-height: 22px;
   margin: 0;
@@ -454,6 +478,14 @@ textarea:focus {
   font-size: 0.94rem;
 }
 
+.calendar-hint {
+  max-width: 520px;
+  margin: 8px auto 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 .toolbar .secondary {
   width: 44px;
   padding: 0;
@@ -478,6 +510,23 @@ textarea:focus {
   padding: 10px;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
+}
+
+.cell[data-date] {
+  cursor: pointer;
+  touch-action: pan-x pan-y;
+  transition: background 140ms ease, box-shadow 140ms ease;
+}
+
+.cell[data-date]:hover,
+.cell[data-date]:focus {
+  background: #f0faf8;
+  box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.18);
+}
+
+.cell.selected-slot {
+  background: #e6f5f1;
+  box-shadow: inset 0 0 0 2px var(--primary);
 }
 
 .cell.header,
@@ -542,6 +591,16 @@ textarea:focus {
   .user-actions {
     grid-template-columns: 1fr;
   }
+
+  .calendar {
+    min-width: 760px;
+    grid-template-columns: 66px repeat(5, minmax(132px, 1fr));
+  }
+
+  .cell {
+    min-height: 76px;
+    padding: 9px;
+  }
 }
 
 @media (max-width: 560px) {
@@ -566,6 +625,48 @@ textarea:focus {
   }
 
   .toolbar {
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    align-items: start;
+    gap: 10px;
+  }
+
+  .toolbar > div {
+    min-width: 0;
+  }
+
+  .calendar-wrap {
+    margin-left: -18px;
+    margin-right: -18px;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+    scroll-snap-type: x proximity;
+  }
+
+  .calendar {
+    min-width: 690px;
+    grid-template-columns: 58px repeat(5, minmax(126px, 1fr));
+  }
+
+  .cell {
+    min-height: 82px;
+    scroll-snap-align: start;
+  }
+
+  .cell.header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .calendar-booking {
+    font-size: 0.78rem;
+  }
+
+  .form button,
+  .status-card button,
+  .status-card .nav-button {
+    width: 100%;
   }
 }

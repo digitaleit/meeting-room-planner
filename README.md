@@ -11,6 +11,9 @@ Funziona in due modi:
 
 - Prenotazione con nome, azienda, data, ora inizio, ora fine e note.
 - Vista settimanale lunedi-venerdi.
+- Selezione slot dal calendario con tap/dito.
+- Prenotazione intera giornata.
+- Orario di fine aggiornato automaticamente se non successivo all'inizio.
 - Stato sala: libera o occupata in questo momento.
 - Lista delle prossime prenotazioni.
 - Login con Supabase Auth.
