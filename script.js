@@ -148,13 +148,18 @@ async function sendPasswordReset() {
   }
 
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.href,
+    redirectTo: getResetUrl(),
   });
 
   showAuthMessage(
     error ? "Non riesco a inviare la mail di reset." : "Email inviata: controlla la tua posta.",
     error ? "error" : "ok"
   );
+}
+
+function getResetUrl() {
+  const basePath = window.location.pathname.replace(/[^/]*$/, "");
+  return `${window.location.origin}${basePath}reset.html`;
 }
 
 async function logout() {

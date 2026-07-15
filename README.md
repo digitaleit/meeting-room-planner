@@ -69,8 +69,14 @@ const SUPABASE_ANON_KEY = "la-tua-anon-public-key";
 
 11. In Supabase apri **Database** -> **Replication** e verifica che la tabella `bookings` sia abilitata per Realtime.
 
-12. Fai commit e push della modifica a `script.js`.
-13. Dopo il deploy automatico di GitHub Pages, la card in alto deve mostrare **Modalita condivisa con login**.
+12. In **Authentication** -> **URL Configuration** imposta:
+   - Site URL: `https://digitaleit.github.io/meeting-room-planner`
+   - Redirect URLs: `https://digitaleit.github.io/meeting-room-planner/reset.html`
+
+   Per provare in locale puoi aggiungere anche `http://localhost:3004/reset.html`.
+
+13. Fai commit e push della modifica a `script.js`.
+14. Dopo il deploy automatico di GitHub Pages, la card in alto deve mostrare **Modalita condivisa con login**.
 
 ## Login admin iniziale
 
