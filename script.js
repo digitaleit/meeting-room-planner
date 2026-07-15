@@ -30,8 +30,12 @@ const startInput = document.querySelector("#start_time");
 const endInput = document.querySelector("#end_time");
 const nameInput = document.querySelector("#name");
 const companyInput = document.querySelector("#company");
+const notesInput = document.querySelector("#notes");
 const clearLocalButton = document.querySelector("#clearLocal");
 const allDayInput = document.querySelector("#allDay");
+const bookingSubmit = document.querySelector("#bookingSubmit");
+const cancelEditButton = document.querySelector("#cancelEdit");
+const formTitle = document.querySelector("#formTitle");
 
 const hasSupabaseConfig = SUPABASE_URL.startsWith("https://") && SUPABASE_ANON_KEY.length > 20;
 const supabaseClient = hasSupabaseConfig
@@ -44,6 +48,7 @@ let currentUser = null;
 let currentProfile = null;
 let realtimeChannel = null;
 let calendarSelection = null;
+let editingBookingId = null;
 
 init();
 
@@ -88,6 +93,7 @@ function bindEvents() {
   startInput.addEventListener("change", handleStartTimeChange);
   endInput.addEventListener("change", handleEndTimeChange);
   allDayInput.addEventListener("change", handleAllDayChange);
+  cancelEditButton.addEventListener("click", resetEditMode);
 
   document.querySelector("#prevWeek").addEventListener("click", () => {
     currentMonday.setDate(currentMonday.getDate() - 7);
@@ -113,6 +119,7 @@ function bindEvents() {
   });
 
   bookingForm.addEventListener("submit", handleSubmit);
+  bookingList.addEventListener("click", handleBookingAction);
   calendar.addEventListener("pointerdown", startCalendarSelection);
   calendar.addEventListener("pointerover", extendCalendarSelection);
   window.addEventListener("pointerup", finishCalendarSelection);
@@ -218,7 +225,8 @@ function updateSyncStatus() {
 
 async function loadBookings() {
   try {
-    bookings = supabaseClient ? await getRemoteBookings() : getLocalBookings();
+    const loadedBookings = supabaseClient ? await getRemoteBookings() : getLocalBookings();
+    bookings = filterCurrentBookings(loadedBookings);
     render();
   } catch (error) {
     showMessage("Non riesco a caricare le prenotazioni. Controlla la configurazione.", "error");
@@ -260,13 +268,29 @@ async function handleSubmit(event) {
     return;
   }
 
-  if (hasOverlap(booking, bookings)) {
+  if (hasOverlap(booking, bookings, editingBookingId)) {
     showMessage("Sala gia prenotata in quella fascia oraria.", "error");
     return;
   }
 
   try {
     let emailWarning = false;
+
+    if (editingBookingId && supabaseClient) {
+      await updateRemoteBooking({ ...booking, id: editingBookingId });
+      await loadBookings();
+      resetEditMode();
+      showMessage("Prenotazione aggiornata.", "ok");
+      return;
+    }
+
+    if (editingBookingId) {
+      bookings = updateLocalBooking({ ...booking, id: editingBookingId });
+      resetEditMode();
+      render();
+      showMessage("Prenotazione aggiornata.", "ok");
+      return;
+    }
 
     if (supabaseClient) {
       const savedBooking = await saveRemoteBooking(booking);
@@ -277,13 +301,7 @@ async function handleSubmit(event) {
       render();
     }
 
-    bookingForm.reset();
-    applyProfile();
-    allDayInput.checked = false;
-    startInput.readOnly = false;
-    endInput.readOnly = false;
-    dateInput.value = booking.date;
-    setDefaultTimesAfterBooking(booking);
+    resetFormAfterBooking(booking);
     currentMonday = getMonday(new Date(`${booking.date}T12:00:00`));
     showMessage(
       emailWarning
@@ -307,8 +325,8 @@ function getBookingFromForm() {
 
   return {
     user_id: currentUser?.id || null,
-    name: cleanText(currentProfile?.username || formData.get("name")),
-    company: cleanText(currentProfile?.company || formData.get("company")),
+    name: cleanText(editingBookingId ? formData.get("name") : currentProfile?.username || formData.get("name")),
+    company: cleanText(editingBookingId ? formData.get("company") : currentProfile?.company || formData.get("company")),
     date: formData.get("date"),
     start_time: formData.get("start_time"),
     end_time: formData.get("end_time"),
@@ -332,8 +350,9 @@ function validateBooking(booking) {
   return "";
 }
 
-function hasOverlap(candidate, list) {
+function hasOverlap(candidate, list, ignoredId = null) {
   return list.some((booking) => {
+    if (ignoredId && booking.id === ignoredId) return false;
     if (booking.date !== candidate.date) return false;
     return candidate.start_time < booking.end_time && candidate.end_time > booking.start_time;
   });
@@ -347,6 +366,32 @@ async function saveRemoteBooking(booking) {
     .single();
 
   if (error) throw error;
+  return data;
+}
+
+async function updateRemoteBooking(booking) {
+  const { data, error } = await supabaseClient.functions.invoke("manage-booking", {
+    body: {
+      action: "update",
+      booking,
+    },
+  });
+
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data?.booking;
+}
+
+async function deleteRemoteBooking(booking) {
+  const { data, error } = await supabaseClient.functions.invoke("manage-booking", {
+    body: {
+      action: "delete",
+      booking: { id: booking.id },
+    },
+  });
+
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
   return data;
 }
 
@@ -382,6 +427,21 @@ function saveLocalBooking(booking) {
   return nextBookings;
 }
 
+function updateLocalBooking(booking) {
+  const nextBookings = bookings
+    .map((item) => item.id === booking.id ? { ...item, ...booking } : item)
+    .sort(sortByDateAndTime);
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(nextBookings));
+  return filterCurrentBookings(nextBookings);
+}
+
+function deleteLocalBooking(booking) {
+  const nextBookings = bookings.filter((item) => item.id !== booking.id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(nextBookings));
+  return nextBookings;
+}
+
 function subscribeToRealtime() {
   if (!supabaseClient || realtimeChannel) return;
 
@@ -402,7 +462,7 @@ function unsubscribeFromRealtime() {
 }
 
 function render() {
-  bookings = bookings.slice().sort(sortByDateAndTime);
+  bookings = filterCurrentBookings(bookings).sort(sortByDateAndTime);
   renderStatus();
   renderCalendar();
   renderList();
@@ -612,15 +672,106 @@ function renderList() {
   bookings.forEach((item) => {
     const row = document.createElement("article");
     row.className = "booking-row";
+    const canManage = userCanManage(item);
     row.innerHTML = `
       <strong>${escapeHtml(formatItalianDate(item.date))}<br>${escapeHtml(item.start_time)}-${escapeHtml(item.end_time)}</strong>
       <div>
         <span>${escapeHtml(item.name)}</span>
         <small>${escapeHtml(item.company)}${item.notes ? " · " + escapeHtml(item.notes) : ""}</small>
       </div>
+      ${canManage ? `
+        <div class="booking-actions">
+          <button class="secondary" type="button" data-action="edit" data-id="${escapeHtml(item.id)}">Modifica</button>
+          <button class="danger-button" type="button" data-action="delete" data-id="${escapeHtml(item.id)}">Cancella</button>
+        </div>
+      ` : ""}
     `;
     bookingList.append(row);
   });
+}
+
+async function handleBookingAction(event) {
+  const button = event.target.closest("button[data-action][data-id]");
+  if (!button) return;
+
+  const booking = bookings.find((item) => item.id === button.dataset.id);
+  if (!booking || !userCanManage(booking)) {
+    showMessage("Puoi modificare o cancellare solo le tue prenotazioni.", "error");
+    return;
+  }
+
+  if (button.dataset.action === "edit") {
+    editBooking(booking);
+    return;
+  }
+
+  if (!confirm(`Vuoi cancellare la prenotazione del ${formatItalianDate(booking.date)} ${booking.start_time}-${booking.end_time}?`)) {
+    return;
+  }
+
+  try {
+    if (supabaseClient) {
+      await deleteRemoteBooking(booking);
+      await loadBookings();
+    } else {
+      bookings = deleteLocalBooking(booking);
+      render();
+    }
+
+    if (editingBookingId === booking.id) resetEditMode();
+    showMessage("Prenotazione cancellata.", "ok");
+  } catch (error) {
+    showMessage("Non riesco a cancellare la prenotazione.", "error");
+  }
+}
+
+function editBooking(booking) {
+  editingBookingId = booking.id;
+  formTitle.textContent = "Modifica prenotazione";
+  bookingSubmit.textContent = "Salva modifica";
+  cancelEditButton.classList.remove("hidden");
+  dateInput.value = booking.date;
+  startInput.value = booking.start_time;
+  endInput.value = booking.end_time;
+  nameInput.value = booking.name;
+  companyInput.value = booking.company;
+  notesInput.value = booking.notes || "";
+  allDayInput.checked = booking.start_time === `${String(OPEN_HOUR).padStart(2, "0")}:00` &&
+    booking.end_time === `${String(CLOSE_HOUR).padStart(2, "0")}:00`;
+  startInput.readOnly = allDayInput.checked;
+  endInput.readOnly = allDayInput.checked;
+  currentMonday = getMonday(new Date(`${booking.date}T12:00:00`));
+  renderCalendar();
+  bookingForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  showMessage("Modifica la prenotazione e salva.", "ok");
+}
+
+function resetEditMode() {
+  editingBookingId = null;
+  formTitle.textContent = "Nuova prenotazione";
+  bookingSubmit.textContent = "Prenota sala";
+  cancelEditButton.classList.add("hidden");
+  bookingForm.reset();
+  applyProfile();
+  allDayInput.checked = false;
+  startInput.readOnly = false;
+  endInput.readOnly = false;
+  dateInput.valueAsDate = new Date();
+  startInput.value = "09:00";
+  endInput.value = "10:00";
+  currentMonday = getMonday(new Date());
+  renderCalendar();
+  showMessage("");
+}
+
+function resetFormAfterBooking(booking) {
+  bookingForm.reset();
+  applyProfile();
+  allDayInput.checked = false;
+  startInput.readOnly = false;
+  endInput.readOnly = false;
+  dateInput.value = booking.date;
+  setDefaultTimesAfterBooking(booking);
 }
 
 function calendarBooking(item) {
@@ -632,6 +783,19 @@ function calendarBooking(item) {
     <small>${escapeHtml(item.company)}</small>
   `;
   return div;
+}
+
+function userCanManage(booking) {
+  if (!currentUser) return !supabaseClient;
+  return currentProfile?.is_admin || booking.user_id === currentUser.id;
+}
+
+function filterCurrentBookings(list) {
+  const now = new Date();
+  return (list || []).filter((booking) => {
+    const end = new Date(`${booking.date}T${String(booking.end_time).slice(0, 5)}:00`);
+    return end >= now;
+  });
 }
 
 function cell(text, className) {

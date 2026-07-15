@@ -14,6 +14,8 @@ Funziona in due modi:
 - Selezione slot dal calendario con tap/dito.
 - Prenotazione intera giornata.
 - Orario di fine aggiornato automaticamente se non successivo all'inizio.
+- Modifica/cancellazione prenotazioni solo per proprietario o admin.
+- Le prenotazioni passate non vengono mostrate.
 - Stato sala: libera o occupata in questo momento.
 - Lista delle prossime prenotazioni.
 - Login con Supabase Auth.
@@ -37,6 +39,7 @@ Funziona in due modi:
 - `supabase-setup.sql`: script pronto da copiare in Supabase.
 - `supabase/functions/send-booking-email/index.ts`: funzione Supabase per inviare email e calendario.
 - `supabase/functions/admin-create-user/index.ts`: funzione Supabase per creare utenti Auth e profili.
+- `supabase/functions/manage-booking/index.ts`: funzione Supabase per modificare/cancellare prenotazioni solo come proprietario o admin.
 
 ## Configurare Supabase Free
 
@@ -143,6 +146,7 @@ supabase secrets set SERVICE_ROLE_KEY="la_tua_service_role_key"
 supabase secrets set APP_BASE_URL="https://digitaleit.github.io/meeting-room-planner"
 supabase functions deploy send-booking-email
 supabase functions deploy admin-create-user
+supabase functions deploy manage-booking
 ```
 
 Dopo il deploy, quando un utente prenota, la webapp chiama la funzione `send-booking-email`. Se la funzione non e ancora configurata, la prenotazione viene comunque salvata, ma compare un avviso sull'email non inviata.
@@ -172,7 +176,7 @@ Dopo il deploy, quando un utente prenota, la webapp chiama la funzione `send-boo
 
 Questa configurazione usa Supabase Auth e Row Level Security. La chiave pubblica Supabase può stare nel frontend, ma la `service_role key` non deve mai essere inserita in `script.js`.
 
-Le policy incluse permettono lettura e creazione delle prenotazioni solo agli utenti autenticati. La gestione automatica degli utenti e le email di calendario devono passare da una funzione server Supabase.
+Le policy incluse permettono lettura e creazione delle prenotazioni solo agli utenti autenticati. La gestione automatica degli utenti, le email di calendario e la modifica/cancellazione delle prenotazioni passano da funzioni server Supabase.
 
 ## Personalizzazione rapida
 

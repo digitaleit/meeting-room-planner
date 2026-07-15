@@ -8,7 +8,7 @@
     name="description"
     content="Webapp statica per prenotare una sala riunioni in coworking, con versione condivisa Supabase."
   >
-  <link rel="stylesheet" href="style.css?v=mobile-booking-1">
+  <link rel="stylesheet" href="style.css?v=booking-management-1">
 </head>
 <body>
   <section class="auth-screen" id="authScreen">
@@ -51,7 +51,23 @@
       </div>
     </header>
 
-    <section class="grid">
+    <section class="week-shell" aria-labelledby="weekTitle">
+      <div class="toolbar">
+        <button id="prevWeek" class="secondary" type="button" aria-label="Settimana precedente">←</button>
+        <div>
+          <h2 id="weekTitle">Calendario settimanale</h2>
+          <strong id="weekLabel"></strong>
+          <p class="calendar-hint">Tocca uno slot per prenotarlo. Su mobile puoi trascinare sullo stesso giorno per estendere la durata.</p>
+        </div>
+        <button id="nextWeek" class="secondary" type="button" aria-label="Settimana successiva">→</button>
+      </div>
+
+      <div class="calendar-wrap">
+        <section class="calendar" id="calendar" aria-live="polite"></section>
+      </div>
+    </section>
+
+    <section class="grid booking-grid">
       <section class="panel booking-panel" aria-labelledby="formTitle">
         <div>
           <h2 id="formTitle">Nuova prenotazione</h2>
@@ -96,7 +112,10 @@
             <textarea id="notes" name="notes" rows="4" placeholder="Es. call cliente, colloquio, riunione interna..." maxlength="300"></textarea>
           </label>
 
-          <button type="submit">Prenota sala</button>
+          <div class="form-actions">
+            <button id="bookingSubmit" type="submit">Prenota sala</button>
+            <button id="cancelEdit" class="secondary hidden" type="button">Annulla modifica</button>
+          </div>
           <p id="message" class="message" role="status"></p>
         </form>
       </section>
@@ -114,25 +133,9 @@
       </section>
     </section>
 
-    <section class="week-shell" aria-labelledby="weekTitle">
-      <div class="toolbar">
-        <button id="prevWeek" class="secondary" type="button" aria-label="Settimana precedente">←</button>
-        <div>
-          <h2 id="weekTitle">Calendario settimanale</h2>
-          <strong id="weekLabel"></strong>
-          <p class="calendar-hint">Tocca uno slot per prenotarlo. Su mobile puoi trascinare sullo stesso giorno per estendere la durata.</p>
-        </div>
-        <button id="nextWeek" class="secondary" type="button" aria-label="Settimana successiva">→</button>
-      </div>
-
-      <div class="calendar-wrap">
-        <section class="calendar" id="calendar" aria-live="polite"></section>
-      </div>
-    </section>
-
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="script.js?v=mobile-booking-1"></script>
+  <script src="script.js?v=booking-management-1"></script>
 </body>
 </html>
