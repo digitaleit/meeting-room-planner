@@ -5,11 +5,12 @@ const corsHeaders = {
 };
 
 type CreateUserPayload = {
-  action?: "list" | "upsert" | "reset";
+  action?: "list" | "upsert" | "reset" | "delete";
   username: string;
   company: string;
   email: string;
   password?: string;
+  userId?: string;
 };
 
 Deno.serve(async (request) => {
@@ -71,6 +72,17 @@ Deno.serve(async (request) => {
         isNewAccount: false,
       });
       return jsonResponse({ ok: true, passwordResetSent: true });
+    }
+
+    if (action === "delete") {
+      if (!payload.userId) return jsonResponse({ error: "Missing user id" }, 400);
+      if (payload.userId === caller.id) return jsonResponse({ error: "Non puoi rimuovere il tuo account." }, 400);
+
+      const targetIsAdmin = await checkAdmin(supabaseUrl, serviceRoleKey, payload.userId);
+      if (targetIsAdmin) return jsonResponse({ error: "Non puoi rimuovere un amministratore." }, 400);
+
+      await deleteAuthUser(supabaseUrl, serviceRoleKey, payload.userId);
+      return jsonResponse({ ok: true, deletedUserId: payload.userId });
     }
 
     const validationError = validatePayload(payload);
@@ -239,6 +251,18 @@ async function getAuthUserByEmail(supabaseUrl: string, serviceRoleKey: string, e
   const data = await response.json();
   const users = Array.isArray(data?.users) ? data.users : [];
   return users.find((user: { email?: string }) => user.email?.toLowerCase() === email.toLowerCase()) || null;
+}
+
+async function deleteAuthUser(supabaseUrl: string, serviceRoleKey: string, userId: string) {
+  const response = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+    headers: serviceHeaders(serviceRoleKey),
+  });
+
+  if (!response.ok) {
+    const error = await safeJson(response);
+    throw new Error(error.message || "Unable to delete auth user");
+  }
 }
 
 async function upsertProfile(
