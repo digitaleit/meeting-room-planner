@@ -25,6 +25,8 @@ let users = [];
 init();
 
 async function init() {
+  if (redirectRecoveryToPasswordPage()) return;
+
   bindEvents();
 
   const { data } = await supabaseClient.auth.getSession();
@@ -36,8 +38,28 @@ async function init() {
 
   supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (event === "SIGNED_OUT") showLogin();
+    if (event === "PASSWORD_RECOVERY") {
+      redirectRecoveryToPasswordPage(true);
+      return;
+    }
     if (event === "SIGNED_IN" && session?.user) await handleAuthenticated(session.user);
   });
+}
+
+function redirectRecoveryToPasswordPage(force = false) {
+  const query = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  const isRecovery = force
+    || query.has("code")
+    || query.get("type") === "recovery"
+    || hash.get("type") === "recovery";
+
+  if (!isRecovery) return false;
+
+  const basePath = window.location.pathname.replace(/[^/]*$/, "");
+  sessionStorage.setItem("password-recovery-redirect", "1");
+  window.location.replace(`${basePath}reset.html${window.location.search}${window.location.hash}`);
+  return true;
 }
 
 function bindEvents() {

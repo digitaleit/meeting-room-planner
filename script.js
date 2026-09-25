@@ -53,6 +53,8 @@ let editingBookingId = null;
 init();
 
 async function init() {
+  if (redirectRecoveryToPasswordPage()) return;
+
   dateInput.valueAsDate = new Date();
   startInput.value = "09:00";
   endInput.value = "10:00";
@@ -72,10 +74,15 @@ async function init() {
     await handleAuthenticated(data.session.user);
   } else {
     showLogin();
+    showPasswordUpdatedMessage();
   }
 
   supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (event === "SIGNED_OUT") showLogin();
+    if (event === "PASSWORD_RECOVERY") {
+      redirectRecoveryToPasswordPage(true);
+      return;
+    }
     if (event === "SIGNED_IN" && session?.user) await handleAuthenticated(session.user);
   });
 
@@ -83,6 +90,30 @@ async function init() {
   window.setInterval(() => {
     if (currentUser) loadBookings();
   }, AUTO_REFRESH_MS);
+}
+
+function redirectRecoveryToPasswordPage(force = false) {
+  const query = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  const isRecovery = force
+    || query.has("code")
+    || query.get("type") === "recovery"
+    || hash.get("type") === "recovery";
+
+  if (!isRecovery) return false;
+
+  const basePath = window.location.pathname.replace(/[^/]*$/, "");
+  sessionStorage.setItem("password-recovery-redirect", "1");
+  window.location.replace(`${basePath}reset.html${window.location.search}${window.location.hash}`);
+  return true;
+}
+
+function showPasswordUpdatedMessage() {
+  const query = new URLSearchParams(window.location.search);
+  if (query.get("password_updated") !== "1") return;
+
+  showAuthMessage("Password creata correttamente. Accedi con le tue credenziali.", "ok");
+  window.history.replaceState({}, document.title, window.location.pathname);
 }
 
 function bindEvents() {

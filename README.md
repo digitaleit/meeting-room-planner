@@ -75,8 +75,10 @@ const SUPABASE_ANON_KEY = "la-tua-anon-public-key";
 
    Per provare in locale puoi aggiungere anche `http://localhost:3004/reset.html`.
 
-13. Fai commit e push della modifica a `script.js`.
-14. Dopo il deploy automatico di GitHub Pages, la card in alto deve mostrare **Modalita condivisa con login**.
+13. Se non configuri Brevo per le email di accesso, in **Authentication** -> **Email Templates** -> **Reset password** usa il testo "Il tuo account è stato creato. Clicca sul link per creare la tua password personale" e `{{ .ConfirmationURL }}` come link del pulsante. Non usare `{{ .SiteURL }}`, altrimenti l'utente viene portato direttamente alla home senza poter scegliere la password.
+
+14. Fai commit e push della modifica a `script.js`.
+15. Dopo il deploy automatico di GitHub Pages, la card in alto deve mostrare **Modalita condivisa con login**.
 
 ## Login admin iniziale
 
@@ -110,7 +112,7 @@ Campi richiesti:
 - email
 - password temporanea opzionale
 
-Se inserisci una password, l'utente potra accedere con quella. Se lasci la password vuota, la funzione crea una password temporanea casuale e invia all'utente la mail Supabase per impostare la propria password.
+Se inserisci una password, l'utente potra accedere con quella. Se lasci la password vuota, la funzione crea una password temporanea casuale e invia all'utente una mail con il link per creare la propria password. Se `BREVO_API_KEY` e configurata, la mail personalizzata viene inviata tramite Brevo; altrimenti viene usata la mail di recupero Supabase.
 
 Nella stessa pagina puoi:
 
