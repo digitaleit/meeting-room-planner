@@ -255,6 +255,33 @@ async function sendUserReset(user) {
   showUserMessage(`Reset password inviato a ${user.email}.`, "ok");
 }
 
+async function deleteUser(user, button) {
+  const confirmed = window.confirm(
+    `Rimuovere definitivamente l'utente ${user.email}? Le sue prenotazioni resteranno nello storico.`
+  );
+
+  if (!confirmed) return;
+
+  button.disabled = true;
+  showUserMessage(`Rimozione di ${user.email} in corso...`, "");
+
+  const { error } = await supabaseClient.functions.invoke("admin-create-user", {
+    body: {
+      action: "delete",
+      userId: user.id,
+    },
+  });
+
+  if (error) {
+    button.disabled = false;
+    showUserMessage(await getFunctionErrorMessage(error, `Non riesco a rimuovere ${user.email}.`), "error");
+    return;
+  }
+
+  await loadUsers();
+  showUserMessage(`Utente ${user.email} rimosso.`, "ok");
+}
+
 function renderUsers() {
   usersSummary.textContent = users.length === 1
     ? "1 utente presente."
@@ -279,11 +306,16 @@ function renderUsers() {
         <input data-password-for="${escapeHtml(user.id)}" type="password" autocomplete="new-password" placeholder="Nuova password">
         <button class="secondary" type="button" data-action="set-password">Imposta pw</button>
         <button class="secondary" type="button" data-action="reset">Reset via mail</button>
+        ${user.is_admin || user.id === currentUser?.id
+          ? ""
+          : '<button class="danger-button" type="button" data-action="delete">Rimuovi</button>'}
       </div>
     `;
 
     row.querySelector('[data-action="set-password"]').addEventListener("click", () => setUserPassword(user));
     row.querySelector('[data-action="reset"]').addEventListener("click", () => sendUserReset(user));
+    const deleteButton = row.querySelector('[data-action="delete"]');
+    deleteButton?.addEventListener("click", () => deleteUser(user, deleteButton));
     usersList.append(row);
   });
 }
