@@ -69,13 +69,34 @@ async function sendPasswordReset() {
   }
 
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}${window.location.pathname.replace(/users\.html$/, "")}reset.html`,
+    redirectTo: getResetUrl(),
   });
 
   showAuthMessage(
-    error ? "Non riesco a inviare la mail di reset." : "Email inviata: controlla la tua posta.",
+    error ? getPasswordResetError(error) : "Email inviata: controlla la tua posta.",
     error ? "error" : "ok"
   );
+}
+
+function getResetUrl() {
+  const basePath = window.location.pathname.replace(/[^/]*$/, "");
+  return `${window.location.origin}${basePath}reset.html`;
+}
+
+function getPasswordResetError(error) {
+  const message = String(error?.message || "").toLowerCase();
+
+  if (message.includes("rate") || message.includes("security purposes")) {
+    return "Troppe richieste ravvicinate: aspetta qualche minuto e riprova.";
+  }
+
+  if (message.includes("redirect")) {
+    return "Il link di reset non e ancora autorizzato in Supabase.";
+  }
+
+  return error?.message
+    ? `Reset non inviato: ${error.message}`
+    : "Non riesco a inviare la mail di reset.";
 }
 
 async function logout() {
