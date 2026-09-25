@@ -22,6 +22,7 @@ const bookingList = document.querySelector("#bookingList");
 const bookingCount = document.querySelector("#bookingCount");
 const message = document.querySelector("#message");
 const weekLabel = document.querySelector("#weekLabel");
+const weekTitle = document.querySelector("#weekTitle");
 const roomStatus = document.querySelector("#roomStatus");
 const nextBooking = document.querySelector("#nextBooking");
 const syncStatus = document.querySelector("#syncStatus");
@@ -585,6 +586,7 @@ function renderCalendar() {
     : weekDays;
 
   calendar.classList.toggle("mobile-day-view", mobileDayView);
+  weekTitle.textContent = mobileDayView ? "Disponibilità del giorno" : "Calendario settimanale";
   weekLabel.textContent = mobileDayView
     ? days[0].toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })
     : `${formatItalianDate(formatDate(weekDays[0]))} - ${formatItalianDate(formatDate(weekDays[4]))}`;

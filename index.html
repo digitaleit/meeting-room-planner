@@ -8,7 +8,7 @@
     name="description"
     content="Webapp statica per prenotare una sala riunioni in coworking, con versione condivisa Supabase."
   >
-  <link rel="stylesheet" href="style.css?v=2026.09.25.6">
+  <link rel="stylesheet" href="style.css?v=2026.09.25.7">
 </head>
 <body>
   <section class="auth-screen" id="authScreen">
@@ -50,33 +50,6 @@
         <button id="logoutButton" class="secondary" type="button">Esci</button>
       </div>
     </header>
-
-    <section class="week-shell" aria-labelledby="weekTitle">
-      <div class="toolbar">
-        <button id="prevWeek" class="secondary" type="button" aria-label="Settimana precedente">←</button>
-        <div>
-          <h2 id="weekTitle">Calendario settimanale</h2>
-          <strong id="weekLabel"></strong>
-          <p class="calendar-hint">Tocca uno slot per prenotarlo. Su mobile puoi trascinare sullo stesso giorno per estendere la durata.</p>
-        </div>
-        <button id="nextWeek" class="secondary" type="button" aria-label="Settimana successiva">→</button>
-      </div>
-
-      <div class="mobile-calendar-controls" aria-label="Navigazione calendario giornaliero">
-        <button id="prevDay" class="secondary" type="button" aria-label="Giorno precedente">←</button>
-        <label class="mobile-date-picker">
-          <span>Vai alla data</span>
-          <input id="mobileCalendarDate" type="date">
-        </label>
-        <button id="todayButton" class="secondary" type="button">Oggi</button>
-        <button id="nextDay" class="secondary" type="button" aria-label="Giorno successivo">→</button>
-      </div>
-      <div class="mobile-day-strip" id="mobileDayStrip" aria-label="Giorni della settimana"></div>
-
-      <div class="calendar-wrap">
-        <section class="calendar" id="calendar" aria-live="polite"></section>
-      </div>
-    </section>
 
     <section class="grid booking-grid">
       <section class="panel booking-panel" aria-labelledby="formTitle">
@@ -131,6 +104,33 @@
         </form>
       </section>
 
+      <section class="week-shell" aria-labelledby="weekTitle">
+        <div class="toolbar">
+          <button id="prevWeek" class="secondary" type="button" aria-label="Settimana precedente">←</button>
+          <div>
+            <h2 id="weekTitle">Calendario settimanale</h2>
+            <strong id="weekLabel"></strong>
+            <p class="calendar-hint">Tocca uno slot per prenotarlo. Su mobile scegli prima data e ora nel modulo.</p>
+          </div>
+          <button id="nextWeek" class="secondary" type="button" aria-label="Settimana successiva">→</button>
+        </div>
+
+        <div class="mobile-calendar-controls" aria-label="Navigazione calendario giornaliero">
+          <button id="prevDay" class="secondary" type="button" aria-label="Giorno precedente">←</button>
+          <label class="mobile-date-picker">
+            <span>Vai alla data</span>
+            <input id="mobileCalendarDate" type="date">
+          </label>
+          <button id="todayButton" class="secondary" type="button">Oggi</button>
+          <button id="nextDay" class="secondary" type="button" aria-label="Giorno successivo">→</button>
+        </div>
+        <div class="mobile-day-strip" id="mobileDayStrip" aria-label="Giorni della settimana"></div>
+
+        <div class="calendar-wrap">
+          <section class="calendar" id="calendar" aria-live="polite"></section>
+        </div>
+      </section>
+
       <section class="panel list-panel" aria-labelledby="listTitle">
         <div class="list-heading">
           <div>
@@ -147,7 +147,7 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="script.js?v=2026.09.25.6"></script>
-  <div class="release-badge" aria-label="Versione applicazione">v2026.09.25.6</div>
+  <script src="script.js?v=2026.09.25.7"></script>
+  <div class="release-badge" aria-label="Versione applicazione">v2026.09.25.7</div>
 </body>
 </html>
