@@ -483,7 +483,7 @@ textarea:focus {
 
 .user-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(280px, 1.3fr);
+  grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.6fr);
   gap: 16px;
   align-items: center;
   padding: 14px;
@@ -511,9 +511,15 @@ textarea:focus {
 
 .user-actions {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) repeat(3, auto);
+  grid-template-columns: minmax(150px, 1fr) auto auto;
   gap: 10px;
   align-items: center;
+  min-width: 0;
+}
+
+.user-actions .danger-button {
+  grid-column: 2 / 4;
+  justify-self: end;
 }
 
 .toolbar {
@@ -641,6 +647,11 @@ textarea:focus {
   .user-row,
   .user-actions {
     grid-template-columns: 1fr;
+  }
+
+  .user-actions .danger-button {
+    grid-column: auto;
+    justify-self: stretch;
   }
 
   .calendar {
