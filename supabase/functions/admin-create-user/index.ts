@@ -26,6 +26,9 @@ Deno.serve(async (request) => {
     const serviceRoleKey = Deno.env.get("SERVICE_ROLE_KEY");
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://digitaleit.github.io/meeting-room-planner";
+    const brevoApiKey = Deno.env.get("BREVO_API_KEY");
+    const senderEmail = Deno.env.get("BREVO_SENDER_EMAIL") || "stefano@stefanoserra.it";
+    const senderName = Deno.env.get("BREVO_SENDER_NAME") || "Meeting Room Planner";
     const authToken = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
 
     if (!supabaseUrl || !serviceRoleKey || !anonKey) {
@@ -56,7 +59,17 @@ Deno.serve(async (request) => {
 
     if (action === "reset") {
       if (!payload.email?.includes("@")) return jsonResponse({ error: "Missing valid email" }, 400);
-      await sendPasswordReset(supabaseUrl, anonKey, payload.email.trim().toLowerCase(), appBaseUrl);
+      await sendPasswordReset({
+        supabaseUrl,
+        serviceRoleKey,
+        anonKey,
+        email: payload.email.trim().toLowerCase(),
+        appBaseUrl,
+        brevoApiKey,
+        senderEmail,
+        senderName,
+        isNewAccount: false,
+      });
       return jsonResponse({ ok: true, passwordResetSent: true });
     }
 
@@ -85,7 +98,17 @@ Deno.serve(async (request) => {
     });
 
     if (shouldSendReset) {
-      await sendPasswordReset(supabaseUrl, anonKey, email, appBaseUrl);
+      await sendPasswordReset({
+        supabaseUrl,
+        serviceRoleKey,
+        anonKey,
+        email,
+        appBaseUrl,
+        brevoApiKey,
+        senderEmail,
+        senderName,
+        isNewAccount: true,
+      });
     }
 
     return jsonResponse({
@@ -244,17 +267,99 @@ async function upsertProfile(
   }
 }
 
-async function sendPasswordReset(supabaseUrl: string, anonKey: string, email: string, appBaseUrl: string) {
-  const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
+type PasswordEmailOptions = {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+  anonKey: string;
+  email: string;
+  appBaseUrl: string;
+  brevoApiKey?: string;
+  senderEmail: string;
+  senderName: string;
+  isNewAccount: boolean;
+};
+
+async function sendPasswordReset(options: PasswordEmailOptions) {
+  if (options.brevoApiKey) {
+    const actionLink = await generateRecoveryLink(options);
+    await sendPasswordEmailWithBrevo(options, actionLink);
+    return;
+  }
+
+  await sendSupabasePasswordReset(options);
+}
+
+async function generateRecoveryLink(options: PasswordEmailOptions) {
+  const redirectTo = `${options.appBaseUrl.replace(/\/$/, "")}/reset.html`;
+  const response = await fetch(`${options.supabaseUrl}/auth/v1/admin/generate_link`, {
+    method: "POST",
+    headers: serviceHeaders(options.serviceRoleKey),
+    body: JSON.stringify({
+      type: "recovery",
+      email: options.email,
+      redirect_to: redirectTo,
+    }),
+  });
+
+  const result = await safeJson(response);
+  const actionLink = result.action_link || result.properties?.action_link;
+
+  if (!response.ok || !actionLink) {
+    throw new Error(result.message || result.msg || "Unable to generate password link");
+  }
+
+  return String(actionLink);
+}
+
+async function sendPasswordEmailWithBrevo(options: PasswordEmailOptions, actionLink: string) {
+  const intro = options.isNewAccount
+    ? "Il tuo account è stato creato. Clicca sul link qui sotto per creare la tua password personale."
+    : "Hai richiesto di cambiare la password. Clicca sul pulsante qui sotto per crearne una nuova.";
+  const subject = options.isNewAccount
+    ? "Il tuo account Meeting Room Planner è pronto"
+    : "Crea una nuova password per Meeting Room Planner";
+
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": options.brevoApiKey!,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      sender: { name: options.senderName, email: options.senderEmail },
+      to: [{ email: options.email }],
+      subject,
+      htmlContent: `
+        <div style="font-family:Arial,sans-serif;line-height:1.6;color:#172033;max-width:560px;margin:0 auto">
+          <h1 style="font-size:24px">Meeting Room Planner</h1>
+          <p>${intro}</p>
+          <p style="margin:28px 0">
+            <a href="${escapeHtml(actionLink)}" style="background:#3157d5;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;display:inline-block">Crea la tua password personale</a>
+          </p>
+          <p style="font-size:13px;color:#667085">Se non hai richiesto questa operazione, puoi ignorare questa email.</p>
+        </div>
+      `,
+      textContent: `${intro}\n\nCrea la tua password: ${actionLink}\n\nSe non hai richiesto questa operazione, puoi ignorare questa email.`,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await safeJson(response);
+    throw new Error(error.message || `Unable to send password email (${response.status})`);
+  }
+}
+
+async function sendSupabasePasswordReset(options: PasswordEmailOptions) {
+  const response = await fetch(`${options.supabaseUrl}/auth/v1/recover`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "apikey": anonKey,
+      "apikey": options.anonKey,
     },
     body: JSON.stringify({
-      email,
+      email: options.email,
       gotrue_meta_security: {},
-      redirect_to: `${appBaseUrl.replace(/\/$/, "")}/reset.html`,
+      redirect_to: `${options.appBaseUrl.replace(/\/$/, "")}/reset.html`,
     }),
   });
 
@@ -262,6 +367,14 @@ async function sendPasswordReset(supabaseUrl: string, anonKey: string, email: st
     const error = await safeJson(response);
     throw new Error(error.message || error.msg || `Unable to send password reset (${response.status})`);
   }
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
 async function safeJson(response: Response) {
