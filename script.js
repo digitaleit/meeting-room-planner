@@ -247,6 +247,7 @@ async function handleAuthenticated(user) {
   applyProfile();
   authScreen.classList.add("hidden");
   app.classList.remove("hidden");
+  focusCalendarDateOnRender = true;
   await loadBookings();
   subscribeToRealtime();
 }
@@ -646,16 +647,16 @@ function renderCalendar() {
     window.requestAnimationFrame(() => {
       if (focusCalendarDateOnRender) {
         const selectedHeader = calendar.querySelector(`.cell.header[data-date="${selectedCalendarDate}"]`);
-        if (selectedHeader) {
+        if (selectedHeader && calendarWrap.clientWidth > 0) {
           calendarWrap.scrollLeft = Math.max(
             0,
             selectedHeader.offsetLeft - (calendarWrap.clientWidth - selectedHeader.offsetWidth) / 2
           );
+          focusCalendarDateOnRender = false;
         }
       } else {
         calendarWrap.scrollLeft = previousScrollLeft;
       }
-      focusCalendarDateOnRender = false;
     });
   }
 }
