@@ -36,13 +36,17 @@ const allDayInput = document.querySelector("#allDay");
 const bookingSubmit = document.querySelector("#bookingSubmit");
 const cancelEditButton = document.querySelector("#cancelEdit");
 const formTitle = document.querySelector("#formTitle");
+const mobileCalendarDate = document.querySelector("#mobileCalendarDate");
+const mobileDayStrip = document.querySelector("#mobileDayStrip");
+const mobileCalendarMedia = window.matchMedia("(max-width: 700px)");
 
 const hasSupabaseConfig = SUPABASE_URL.startsWith("https://") && SUPABASE_ANON_KEY.length > 20;
 const supabaseClient = hasSupabaseConfig
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
-let currentMonday = getMonday(new Date());
+let selectedCalendarDate = getWorkingDate(new Date());
+let currentMonday = getMonday(new Date(`${selectedCalendarDate}T12:00:00`));
 let bookings = [];
 let currentUser = null;
 let currentProfile = null;
@@ -56,6 +60,7 @@ async function init() {
   if (redirectRecoveryToPasswordPage()) return;
 
   dateInput.valueAsDate = new Date();
+  mobileCalendarDate.value = selectedCalendarDate;
   startInput.value = "09:00";
   endInput.value = "10:00";
   nameInput.readOnly = true;
@@ -90,6 +95,8 @@ async function init() {
   window.setInterval(() => {
     if (currentUser) loadBookings();
   }, AUTO_REFRESH_MS);
+
+  mobileCalendarMedia.addEventListener("change", renderCalendar);
 }
 
 function redirectRecoveryToPasswordPage(force = false) {
@@ -128,12 +135,27 @@ function bindEvents() {
 
   document.querySelector("#prevWeek").addEventListener("click", () => {
     currentMonday.setDate(currentMonday.getDate() - 7);
+    selectedCalendarDate = formatDate(currentMonday);
     render();
   });
 
   document.querySelector("#nextWeek").addEventListener("click", () => {
     currentMonday.setDate(currentMonday.getDate() + 7);
+    selectedCalendarDate = formatDate(currentMonday);
     render();
+  });
+
+  document.querySelector("#prevDay").addEventListener("click", () => changeCalendarDay(-1));
+  document.querySelector("#nextDay").addEventListener("click", () => changeCalendarDay(1));
+  document.querySelector("#todayButton").addEventListener("click", () => setCalendarDay(getWorkingDate(new Date())));
+  mobileCalendarDate.addEventListener("change", () => {
+    if (mobileCalendarDate.value) {
+      setCalendarDay(getWorkingDate(new Date(`${mobileCalendarDate.value}T12:00:00`)));
+    }
+  });
+  mobileDayStrip.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-date]");
+    if (button) setCalendarDay(button.dataset.date);
   });
 
   clearLocalButton.addEventListener("click", () => {
@@ -354,7 +376,9 @@ async function handleSubmit(event) {
     }
 
     resetFormAfterBooking(booking);
+    selectedCalendarDate = booking.date;
     currentMonday = getMonday(new Date(`${booking.date}T12:00:00`));
+    renderCalendar();
     showMessage(
       emailWarning
         ? "Prenotazione confermata. Email calendario non inviata: verifica la funzione Supabase."
@@ -550,13 +574,21 @@ function renderStatus() {
 function renderCalendar() {
   calendar.innerHTML = "";
 
-  const days = Array.from({ length: 5 }, (_, index) => {
+  const weekDays = Array.from({ length: 5 }, (_, index) => {
     const day = new Date(currentMonday);
     day.setDate(currentMonday.getDate() + index);
     return day;
   });
+  const mobileDayView = mobileCalendarMedia.matches;
+  const days = mobileDayView
+    ? [new Date(`${selectedCalendarDate}T12:00:00`)]
+    : weekDays;
 
-  weekLabel.textContent = `${formatItalianDate(formatDate(days[0]))} - ${formatItalianDate(formatDate(days[4]))}`;
+  calendar.classList.toggle("mobile-day-view", mobileDayView);
+  weekLabel.textContent = mobileDayView
+    ? days[0].toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })
+    : `${formatItalianDate(formatDate(weekDays[0]))} - ${formatItalianDate(formatDate(weekDays[4]))}`;
+  renderMobileDayStrip(weekDays);
 
   calendar.append(cell("", "header"));
   days.forEach((day) => {
@@ -595,8 +627,37 @@ function renderCalendar() {
 
 function handleDateChange() {
   if (!dateInput.value) return;
-  currentMonday = getMonday(new Date(`${dateInput.value}T12:00:00`));
+  selectedCalendarDate = getWorkingDate(new Date(`${dateInput.value}T12:00:00`));
+  currentMonday = getMonday(new Date(`${selectedCalendarDate}T12:00:00`));
   renderCalendar();
+}
+
+function renderMobileDayStrip(days) {
+  mobileCalendarDate.value = selectedCalendarDate;
+  mobileDayStrip.innerHTML = days.map((day) => {
+    const date = formatDate(day);
+    const selected = date === selectedCalendarDate;
+    return `
+      <button class="${selected ? "selected" : ""}" type="button" data-date="${date}" aria-pressed="${selected}">
+        <span>${day.toLocaleDateString("it-IT", { weekday: "short" })}</span>
+        <strong>${day.getDate()}</strong>
+      </button>
+    `;
+  }).join("");
+}
+
+function setCalendarDay(date) {
+  selectedCalendarDate = date;
+  currentMonday = getMonday(new Date(`${date}T12:00:00`));
+  renderCalendar();
+}
+
+function changeCalendarDay(offset) {
+  const day = new Date(`${selectedCalendarDate}T12:00:00`);
+  do {
+    day.setDate(day.getDate() + offset);
+  } while (day.getDay() === 0 || day.getDay() === 6);
+  setCalendarDay(formatDate(day));
 }
 
 function handleStartTimeChange() {
@@ -683,6 +744,7 @@ function applyCalendarSelection(selection, shouldScroll = false) {
   startInput.readOnly = false;
   endInput.readOnly = false;
   dateInput.value = selection.date;
+  selectedCalendarDate = selection.date;
   startInput.value = selection.start;
   endInput.value = selection.end;
   ensureEndAfterStart();
@@ -792,6 +854,7 @@ function editBooking(booking) {
     booking.end_time === `${String(CLOSE_HOUR).padStart(2, "0")}:00`;
   startInput.readOnly = allDayInput.checked;
   endInput.readOnly = allDayInput.checked;
+  selectedCalendarDate = booking.date;
   currentMonday = getMonday(new Date(`${booking.date}T12:00:00`));
   renderCalendar();
   bookingForm.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -811,7 +874,8 @@ function resetEditMode() {
   dateInput.valueAsDate = new Date();
   startInput.value = "09:00";
   endInput.value = "10:00";
-  currentMonday = getMonday(new Date());
+  selectedCalendarDate = getWorkingDate(new Date());
+  currentMonday = getMonday(new Date(`${selectedCalendarDate}T12:00:00`));
   renderCalendar();
   showMessage("");
 }
@@ -872,6 +936,14 @@ function getMonday(date) {
   d.setDate(diff);
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+function getWorkingDate(date) {
+  const workingDate = new Date(date);
+  while (workingDate.getDay() === 0 || workingDate.getDay() === 6) {
+    workingDate.setDate(workingDate.getDate() + 1);
+  }
+  return formatDate(workingDate);
 }
 
 function formatDate(date) {

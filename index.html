@@ -8,7 +8,7 @@
     name="description"
     content="Webapp statica per prenotare una sala riunioni in coworking, con versione condivisa Supabase."
   >
-  <link rel="stylesheet" href="style.css?v=2026.09.25.4">
+  <link rel="stylesheet" href="style.css?v=2026.09.25.5">
 </head>
 <body>
   <section class="auth-screen" id="authScreen">
@@ -61,6 +61,17 @@
         </div>
         <button id="nextWeek" class="secondary" type="button" aria-label="Settimana successiva">→</button>
       </div>
+
+      <div class="mobile-calendar-controls" aria-label="Navigazione calendario giornaliero">
+        <button id="prevDay" class="secondary" type="button" aria-label="Giorno precedente">←</button>
+        <label class="mobile-date-picker">
+          <span>Vai alla data</span>
+          <input id="mobileCalendarDate" type="date">
+        </label>
+        <button id="todayButton" class="secondary" type="button">Oggi</button>
+        <button id="nextDay" class="secondary" type="button" aria-label="Giorno successivo">→</button>
+      </div>
+      <div class="mobile-day-strip" id="mobileDayStrip" aria-label="Giorni della settimana"></div>
 
       <div class="calendar-wrap">
         <section class="calendar" id="calendar" aria-live="polite"></section>
@@ -136,7 +147,7 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="script.js?v=2026.09.25.4"></script>
-  <div class="release-badge" aria-label="Versione applicazione">v2026.09.25.4</div>
+  <script src="script.js?v=2026.09.25.5"></script>
+  <div class="release-badge" aria-label="Versione applicazione">v2026.09.25.5</div>
 </body>
 </html>
