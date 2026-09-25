@@ -18,6 +18,7 @@ const userBadge = document.querySelector("#userBadge");
 const bookingForm = document.querySelector("#bookingForm");
 const usersLink = document.querySelector("#usersLink");
 const calendar = document.querySelector("#calendar");
+const calendarWrap = document.querySelector(".calendar-wrap");
 const bookingList = document.querySelector("#bookingList");
 const bookingCount = document.querySelector("#bookingCount");
 const message = document.querySelector("#message");
@@ -54,6 +55,7 @@ let currentProfile = null;
 let realtimeChannel = null;
 let calendarSelection = null;
 let editingBookingId = null;
+let focusCalendarDateOnRender = true;
 
 init();
 
@@ -97,7 +99,10 @@ async function init() {
     if (currentUser) loadBookings();
   }, AUTO_REFRESH_MS);
 
-  mobileCalendarMedia.addEventListener("change", renderCalendar);
+  mobileCalendarMedia.addEventListener("change", () => {
+    focusCalendarDateOnRender = true;
+    renderCalendar();
+  });
 }
 
 function redirectRecoveryToPasswordPage(force = false) {
@@ -379,6 +384,7 @@ async function handleSubmit(event) {
     resetFormAfterBooking(booking);
     selectedCalendarDate = booking.date;
     currentMonday = getMonday(new Date(`${booking.date}T12:00:00`));
+    focusCalendarDateOnRender = true;
     renderCalendar();
     showMessage(
       emailWarning
@@ -573,32 +579,42 @@ function renderStatus() {
 }
 
 function renderCalendar() {
+  const previousScrollLeft = calendarWrap.scrollLeft;
   calendar.innerHTML = "";
 
-  const weekDays = Array.from({ length: 5 }, (_, index) => {
+  const weekDays = Array.from({ length: 7 }, (_, index) => {
     const day = new Date(currentMonday);
     day.setDate(currentMonday.getDate() + index);
     return day;
   });
   const mobileDayView = mobileCalendarMedia.matches;
+  const mobileStart = new Date(currentMonday);
+  mobileStart.setDate(mobileStart.getDate() - 7);
   const days = mobileDayView
-    ? [new Date(`${selectedCalendarDate}T12:00:00`)]
+    ? Array.from({ length: 21 }, (_, index) => {
+        const day = new Date(mobileStart);
+        day.setDate(mobileStart.getDate() + index);
+        return day;
+      })
     : weekDays;
 
   calendar.classList.toggle("mobile-day-view", mobileDayView);
-  weekTitle.textContent = mobileDayView ? "Disponibilità del giorno" : "Calendario settimanale";
+  calendar.style.setProperty("--calendar-day-count", days.length);
+  weekTitle.textContent = mobileDayView ? "Calendario" : "Calendario settimanale";
   weekLabel.textContent = mobileDayView
-    ? days[0].toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })
-    : `${formatItalianDate(formatDate(weekDays[0]))} - ${formatItalianDate(formatDate(weekDays[4]))}`;
+    ? new Date(`${selectedCalendarDate}T12:00:00`).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })
+    : `${formatItalianDate(formatDate(weekDays[0]))} - ${formatItalianDate(formatDate(weekDays[6]))}`;
   renderMobileDayStrip(weekDays);
 
   calendar.append(cell("", "header"));
   days.forEach((day) => {
-    calendar.append(cell(day.toLocaleDateString("it-IT", {
+    const header = cell(day.toLocaleDateString("it-IT", {
       weekday: "short",
       day: "2-digit",
       month: "2-digit",
-    }), "header"));
+    }), "header");
+    header.dataset.date = formatDate(day);
+    calendar.append(header);
   });
 
   const hours = Array.from({ length: CLOSE_HOUR - OPEN_HOUR }, (_, i) => `${String(i + OPEN_HOUR).padStart(2, "0")}:00`);
@@ -625,12 +641,30 @@ function renderCalendar() {
   });
 
   markSelectedCalendarSlots();
+
+  if (mobileDayView) {
+    window.requestAnimationFrame(() => {
+      if (focusCalendarDateOnRender) {
+        const selectedHeader = calendar.querySelector(`.cell.header[data-date="${selectedCalendarDate}"]`);
+        if (selectedHeader) {
+          calendarWrap.scrollLeft = Math.max(
+            0,
+            selectedHeader.offsetLeft - (calendarWrap.clientWidth - selectedHeader.offsetWidth) / 2
+          );
+        }
+      } else {
+        calendarWrap.scrollLeft = previousScrollLeft;
+      }
+      focusCalendarDateOnRender = false;
+    });
+  }
 }
 
 function handleDateChange() {
   if (!dateInput.value) return;
   selectedCalendarDate = getWorkingDate(new Date(`${dateInput.value}T12:00:00`));
   currentMonday = getMonday(new Date(`${selectedCalendarDate}T12:00:00`));
+  focusCalendarDateOnRender = true;
   renderCalendar();
 }
 
@@ -651,14 +685,13 @@ function renderMobileDayStrip(days) {
 function setCalendarDay(date) {
   selectedCalendarDate = date;
   currentMonday = getMonday(new Date(`${date}T12:00:00`));
+  focusCalendarDateOnRender = true;
   renderCalendar();
 }
 
 function changeCalendarDay(offset) {
   const day = new Date(`${selectedCalendarDate}T12:00:00`);
-  do {
-    day.setDate(day.getDate() + offset);
-  } while (day.getDay() === 0 || day.getDay() === 6);
+  day.setDate(day.getDate() + offset);
   setCalendarDay(formatDate(day));
 }
 
@@ -708,6 +741,7 @@ function ensureEndAfterStart() {
 function startCalendarSelection(event) {
   const slot = event.target.closest(".cell[data-date][data-hour]");
   if (!slot) return;
+  if (mobileCalendarMedia.matches && event.pointerType === "touch") return;
 
   event.preventDefault();
   const date = slot.dataset.date;
@@ -858,6 +892,7 @@ function editBooking(booking) {
   endInput.readOnly = allDayInput.checked;
   selectedCalendarDate = booking.date;
   currentMonday = getMonday(new Date(`${booking.date}T12:00:00`));
+  focusCalendarDateOnRender = true;
   renderCalendar();
   bookingForm.scrollIntoView({ behavior: "smooth", block: "start" });
   showMessage("Modifica la prenotazione e salva.", "ok");
@@ -878,6 +913,7 @@ function resetEditMode() {
   endInput.value = "10:00";
   selectedCalendarDate = getWorkingDate(new Date());
   currentMonday = getMonday(new Date(`${selectedCalendarDate}T12:00:00`));
+  focusCalendarDateOnRender = true;
   renderCalendar();
   showMessage("");
 }
@@ -941,11 +977,7 @@ function getMonday(date) {
 }
 
 function getWorkingDate(date) {
-  const workingDate = new Date(date);
-  while (workingDate.getDay() === 0 || workingDate.getDay() === 6) {
-    workingDate.setDate(workingDate.getDate() + 1);
-  }
-  return formatDate(workingDate);
+  return formatDate(new Date(date));
 }
 
 function formatDate(date) {
