@@ -235,7 +235,7 @@ h1 {
 }
 
 .booking-grid {
-  margin-top: 24px;
+  margin-top: 0;
 }
 
 .panel,
@@ -452,6 +452,7 @@ textarea:focus {
 }
 
 .week-shell {
+  display: none;
   margin-top: 24px;
 }
 
@@ -754,6 +755,14 @@ textarea:focus {
 }
 
 @media (max-width: 700px) {
+  .week-shell {
+    display: block;
+  }
+
+  .booking-grid {
+    margin-top: 24px;
+  }
+
   .toolbar {
     display: block;
     margin-bottom: 12px;
