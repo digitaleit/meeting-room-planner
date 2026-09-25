@@ -305,9 +305,13 @@ type PasswordEmailOptions = {
 
 async function sendPasswordReset(options: PasswordEmailOptions) {
   if (options.brevoApiKey) {
-    const actionLink = await generateRecoveryLink(options);
-    await sendPasswordEmailWithBrevo(options, actionLink);
-    return;
+    try {
+      const actionLink = await generateRecoveryLink(options);
+      await sendPasswordEmailWithBrevo(options, actionLink);
+      return;
+    } catch (error) {
+      console.error("Brevo password email failed; using Supabase fallback", error);
+    }
   }
 
   await sendSupabasePasswordReset(options);
